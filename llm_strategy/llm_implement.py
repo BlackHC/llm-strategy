@@ -10,7 +10,11 @@ import typing_extensions
 import yaml
 from langchain.llms.base import BaseLLM
 
-from llm_strategy.dataclasses_schema import DataclassesSchema, deserialize_yaml, pretty_type_str
+from llm_strategy.dataclasses_schema import (
+    DataclassesSchema,
+    deserialize_yaml,
+    pretty_type_str,
+)
 from llm_strategy.prompt_doc_string import extract_prompt_template
 from llm_strategy.prompt_template import PromptTemplateMixin
 
@@ -81,12 +85,6 @@ def unwrap_function(f):
     # is f a wrapped function?
     elif hasattr(f, "__wrapped__"):
         f = unwrap_function(f.__wrapped__)
-    # is f a class method?
-    elif isinstance(f, classmethod):
-        f = f.__func__
-    # is f a static method?
-    elif isinstance(f, staticmethod):
-        f = f.__func__
     elif inspect.ismethod(f):
         f = f.__func__
     else:
@@ -145,9 +143,7 @@ class LLMCall:
     def __call__(self, *args, **kwargs):
         bound_inputs = self.signature.bind(*args, **kwargs)
         bound_inputs.apply_defaults()
-        inputs = {
-            name: self._seralize_input(value) for name, value in bound_inputs.arguments.items()
-        }
+        inputs = {name: self._seralize_input(value) for name, value in bound_inputs.arguments.items()}
         inputs_yaml_block = yaml.safe_dump(inputs)
 
         input_types = {name: pretty_type_str(type(value)) for name, value in bound_inputs.arguments.items()}
@@ -157,7 +153,7 @@ class LLMCall:
         runtime_schema.add_bound_arguments(bound_inputs)
 
         if runtime_schema.definitions:
-            runtime_schema_yaml = yaml.safe_dump(dict(types=dict(runtime_schema.definitions)))
+            runtime_schema_yaml = yaml.safe_dump(dict(types=dict(runtime_schema.definitions)))  # # noqa: C408
             runtime_schema_text = f"\n# Dataclasses Schema\n\n{runtime_schema_yaml}\n"
         else:
             runtime_schema_text = ""

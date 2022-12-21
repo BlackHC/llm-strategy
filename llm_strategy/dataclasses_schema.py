@@ -1,3 +1,4 @@
+import contextlib
 import dataclasses
 import inspect
 import types
@@ -7,6 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 import typing_extensions
+import yaml
 
 T = typing.TypeVar("T")
 
@@ -14,7 +16,7 @@ T = typing.TypeVar("T")
 VALID_TYPES = (int, float, str, bool, types.NoneType, dict, list, tuple, set, typing.Union, typing.Optional)
 
 
-def pretty_type_str(type_: typing.Any) -> str:
+def pretty_type_str(type_: typing.Any) -> str:  # noqa: C901
     """Pretty print a type.
 
     Args:
@@ -81,10 +83,10 @@ def get_type_and_metadata_entry(field) -> dict[str, typing.Any]:
     # Support annotations
     if typing.get_origin(field.type) == typing_extensions.Annotated:
         type_ = typing.get_args(field.type)[0]
-        entry = {'type': pretty_type_str(type_), 'metadata': typing.get_args(field.type)[1:]}
+        entry = {"type": pretty_type_str(type_), "metadata": typing.get_args(field.type)[1:]}
     else:
         type_ = field.type
-        entry = {'type': pretty_type_str(type_)}
+        entry = {"type": pretty_type_str(type_)}
     return entry
 
 
@@ -113,7 +115,7 @@ class DataclassesSchema:
         definitions = ChainMap[str, Definition]({}, parent.definitions)
         return DataclassesSchema(definitions)
 
-    def add_complex_type(self, type_: type, add_subclasses=True):
+    def add_complex_type(self, type_: type, add_subclasses=True):  # noqa: C901
         # Step through Annotated types
         origin_type = typing.get_origin(type_) or type_
         if origin_type == typing_extensions.Annotated:
@@ -169,7 +171,7 @@ class DataclassesSchema:
 
     def add_enum_type(self, enum_type: type):
         assert issubclass(enum_type, Enum)
-        self.definitions[enum_type.__name__] = {'type': 'enum', 'values': {member.name for member in enum_type}}
+        self.definitions[enum_type.__name__] = {"type": "enum", "values": {member.name for member in enum_type}}
 
     def add_dataclass_type(
         self,
@@ -223,11 +225,11 @@ class DataclassesSchema:
 
         # Add base classes
         if dataclass_type.__bases__ != (object,):
-            schema['bases'] = []
+            schema["bases"] = []
             for base_class in dataclass_type.__bases__:
                 if base_class != object:
                     self.add_complex_type(base_class, add_subclasses=False)
-                    schema['bases'].append(base_class.__name__)
+                    schema["bases"].append(base_class.__name__)
         # Add subclasses
         if add_subclasses:
             for subclass in dataclass_type.__subclasses__():
@@ -378,11 +380,11 @@ class DataclassesSchema:
             >>> schema.definitions
             {'Foo': {'a': {'type': 'int'}, 'b': {'type': 'str'}}}
         """
-        for name, value in bound_arguments.arguments.items():
+        for _, value in bound_arguments.arguments.items():
             self.add_complex_value(value, add_subclasses=add_subclasses)
 
 
-def deserialize_yaml(decoded_yaml, type_):
+def deserialize_yaml(decoded_yaml, type_):  # noqa: C901
     """
     Deserialize `decoded_yaml` into an instance of `type_`. If `decoded_yaml` is a dict, then
     `type_` can be a dataclass; if `decoded_yaml` is a list, then `type_` can be a
@@ -419,10 +421,8 @@ def deserialize_yaml(decoded_yaml, type_):
     if type_ == typing.Union:
         union_args = typing.get_args(type_)
         for union_type in union_args:
-            try:
+            with contextlib.suppress(yaml.YAMLError):
                 return deserialize_yaml(decoded_yaml, union_type)
-            except Exception:
-                pass
         raise ValueError(f"Could not deserialize {decoded_yaml} into {type_}.")
     if type_ == list and typing.get_args(type_):
         assert typing.get_args(type_) == 1, "Only one type argument is supported for lists."
@@ -437,7 +437,7 @@ def deserialize_yaml(decoded_yaml, type_):
     if type_ == set and typing.get_args(type_):
         assert len(typing.get_args(type_)) == 1, "Only one type argument is supported for sets."
         item_type = typing.get_args(type_)[0]
-        return set(deserialize_yaml(item, item_type) for item in decoded_yaml)
+        return {deserialize_yaml(item, item_type) for item in decoded_yaml}
     if type_ == dict and typing.get_args(type_):
         assert len(typing.get_args(type_)) == 2, "Only two type arguments are supported for dicts."
         item_type = typing.get_args(type_)[1]

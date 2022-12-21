@@ -115,10 +115,10 @@ def test_get_type_and_metadata_entry():
     @dataclass
     class A:
         a: int
-        b: typing_extensions.Annotated[int, 'a', 'b']
+        b: typing_extensions.Annotated[int, "a", "b"]
 
-    assert get_type_and_metadata_entry(dataclasses.fields(A)[0]) == {'type': 'int'}
-    assert get_type_and_metadata_entry(dataclasses.fields(A)[1]) == {'type': 'int', 'metadata': ('a', 'b')}
+    assert get_type_and_metadata_entry(dataclasses.fields(A)[0]) == {"type": "int"}
+    assert get_type_and_metadata_entry(dataclasses.fields(A)[1]) == {"type": "int", "metadata": ("a", "b")}
 
 
 def test_schema():
@@ -134,12 +134,12 @@ def test_schema():
 
     schema = DataclassesSchema()
     schema.add_dataclass_type(A)
-    assert schema.definitions == {'A': {'a': {'type': 'int'}, 'b': {'type': 'str'}}}
+    assert schema.definitions == {"A": {"a": {"type": "int"}, "b": {"type": "str"}}}
 
     schema.add_dataclass_type(B)
     assert schema.definitions == {
-        'A': {'a': {'type': 'int'}, 'b': {'type': 'str'}},
-        'B': {'a': {'type': 'A'}, 'b': {'type': '[A]'}},
+        "A": {"a": {"type": "int"}, "b": {"type": "str"}},
+        "B": {"a": {"type": "A"}, "b": {"type": "[A]"}},
     }
 
     # enum
@@ -150,7 +150,7 @@ def test_schema():
     schema = DataclassesSchema()
     schema.add_enum_type(C)
     assert schema.definitions == {
-        'C': {'type': 'enum', 'values': {'b', 'a'}},
+        "C": {"type": "enum", "values": {"b", "a"}},
     }
 
 
@@ -167,12 +167,12 @@ def test_schema_with_instances():
 
     schema = DataclassesSchema()
     schema.add_dataclass(A(1, "2"))
-    assert schema.definitions == {'A': {'a': {'type': 'int'}, 'b': {'type': 'str'}}}
+    assert schema.definitions == {"A": {"a": {"type": "int"}, "b": {"type": "str"}}}
 
     schema.add_dataclass(B(A(1, "2"), [A(1, "2")]))
     assert schema.definitions == {
-        'A': {'a': {'type': 'int'}, 'b': {'type': 'str'}},
-        'B': {'a': {'type': 'A'}, 'b': {'type': '[A]'}},
+        "A": {"a": {"type": "int"}, "b": {"type": "str"}},
+        "B": {"a": {"type": "A"}, "b": {"type": "[A]"}},
     }
 
     # Enum
@@ -183,19 +183,19 @@ def test_schema_with_instances():
     schema = DataclassesSchema()
     schema.add_complex_value(C.a)
     assert schema.definitions == {
-        'C': {'type': 'enum', 'values': {'b', 'a'}},
+        "C": {"type": "enum", "values": {"b", "a"}},
     }
 
 
 def test_schema_with_annotations():
     @dataclass
     class A:
-        a: typing_extensions.Annotated[str, 'a', 'b']
+        a: typing_extensions.Annotated[str, "a", "b"]
         b: typing.List[int]
 
     schema = DataclassesSchema()
     schema.add_dataclass_type(A)
-    assert schema.definitions == {'A': {'a': {'type': 'str', 'metadata': ('a', 'b')}, 'b': {'type': '[int]'}}}
+    assert schema.definitions == {"A": {"a": {"type": "str", "metadata": ("a", "b")}, "b": {"type": "[int]"}}}
 
 
 def test_schema_with_base_classes():
@@ -212,8 +212,8 @@ def test_schema_with_base_classes():
     schema.add_dataclass_type(B)
     # B will contain all of A's fields and a 'base' list that points to A
     assert schema.definitions == {
-        'A': {'a': {'type': 'int'}, 'b': {'type': 'str'}},
-        'B': {'a': {'type': 'int'}, 'b': {'type': 'str'}, 'c': {'type': 'int'}, 'bases': ['A']},
+        "A": {"a": {"type": "int"}, "b": {"type": "str"}},
+        "B": {"a": {"type": "int"}, "b": {"type": "str"}, "c": {"type": "int"}, "bases": ["A"]},
     }
 
 
@@ -242,14 +242,14 @@ def test_add_return_annotation():
 
     schema = DataclassesSchema()
     schema.add_return_annotation(inspect.signature(foo_A))
-    assert schema.definitions == {'A': {'a': {'type': 'int'}, 'b': {'type': 'str'}}}
+    assert schema.definitions == {"A": {"a": {"type": "int"}, "b": {"type": "str"}}}
 
     def foo_list_A(a: int, b: str) -> typing.List[A]:
         raise NotImplementedError()
 
     schema = DataclassesSchema()
     schema.add_return_annotation(inspect.signature(foo_list_A))
-    assert schema.definitions == {'A': {'a': {'type': 'int'}, 'b': {'type': 'str'}}}
+    assert schema.definitions == {"A": {"a": {"type": "int"}, "b": {"type": "str"}}}
 
 
 def test_extend_parent():
@@ -261,7 +261,7 @@ def test_extend_parent():
     schema = DataclassesSchema()
     schema.add_dataclass_type(A)
     assert schema.definitions == {
-        'A': {'a': {'type': 'int'}, 'b': {'type': 'str'}},
+        "A": {"a": {"type": "int"}, "b": {"type": "str"}},
     }
 
     @dataclass
@@ -271,11 +271,11 @@ def test_extend_parent():
     schema2 = DataclassesSchema.extend_parent(schema)
     schema2.add_dataclass_type(B)
     assert schema2.definitions == {
-        'A': {'a': {'type': 'int'}, 'b': {'type': 'str'}},
-        'B': {'c': {'type': 'int'}},
+        "A": {"a": {"type": "int"}, "b": {"type": "str"}},
+        "B": {"c": {"type": "int"}},
     }
 
-    assert 'B' not in schema.definitions
+    assert "B" not in schema.definitions
 
 
 def test_deserialize_yaml():

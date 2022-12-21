@@ -58,7 +58,9 @@ def check_not_implemented(f: typing.Callable) -> bool:
     return True
 
 
-def llm_strategy(llm, parent_dataclasses_schema: DataclassesSchema | None = None) -> typing.Callable[[T], T]:
+def llm_strategy(  # noqa: C901
+    llm, parent_dataclasses_schema: DataclassesSchema | None = None
+) -> typing.Callable[[T], T]:
     """
     A strategy that implements what ever it decorates (or is called on) using the LLM.
     """
@@ -137,7 +139,10 @@ def llm_strategy_dataclass(
     @dataclass
     class SpecificLLMImplementation(dataclass_type):
         global long_unlikely__member_name, long_unlikely__member
-        for long_unlikely__member_name, long_unlikely__member in inspect.getmembers_static(dataclass_type, can_wrap_member_in_llm):
+        # type: ignore
+        for long_unlikely__member_name, long_unlikely__member in inspect.getmembers_static(  # noqa: B007
+            dataclass_type, can_wrap_member_in_llm
+        ):
             exec(
                 f"""
 @llm_strategy(long_unlikely_prefix__llm, long_unlikely__dataclasses_schema)

@@ -1,6 +1,6 @@
 from typing import Any, Mapping
 
-from langchain.llms.base import BaseLLM, LLM
+from langchain.llms.base import LLM, BaseLLM
 from pydantic import BaseModel
 
 
@@ -48,7 +48,7 @@ class FakeLLM(LLM, BaseModel):
         for text in self.texts:
             if text.startswith(prompt):
                 # Remainder:
-                response = text[len(prompt):]
+                response = text[len(prompt) :]
 
                 # Emulate stop behavior
                 if stop is not None:
