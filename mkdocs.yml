@@ -1,0 +1,54 @@
+site_name: llm-strategy
+repo_url: https://github.com/blackhc/llm-strategy
+site_url: https://blackhc.github.io/llm-strategy
+site_description: Implementing the Strategy Pattern using LLMs
+site_author: Andreas Kirsch, Daedalus Lab Ltd
+edit_uri: edit/main/docs/
+repo_name: blackhc/llm-strategy
+copyright: Maintained by <a href="https://blackhc.com">Florian</a>.
+
+nav:
+  - Home: index.md
+  - Modules: modules.md
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+            setup_commands:
+                - import sys
+                - sys.path.append('../')
+theme:
+  name: material
+  feature:
+    tabs: true
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: deep orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/blackhc/llm-strategy
+    - icon: fontawesome/brands/python
+      link: https://pypi.com/project/llm-strategy
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
