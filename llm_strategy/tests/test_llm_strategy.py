@@ -134,35 +134,15 @@ def test_llm_strategy_dummy_interface():
     llm = FakeLLM(
         texts={
             (
-                "Execute the following function that is described via a doc string:\n\nReturn 0.\n\n# Task\n\nExecute"
-                " the function with the inputs that follow in the next section and finally return the output using the"
-                " output type\nas YAML document in an # Output section. (If the value is a literal, then just write the"
-                " value. We parse the text in the\n# Output section using `yaml.safe_load` in Python.)\n\n# Dataclasses"
-                " Schema\n\ntypes:\n  DummyInterface:\n    a:\n      type: int\n  DummyInterface[FakeLLM]:\n    a:\n   "
-                "   type: int\n    bases:\n    - DummyInterface\n\n\n# Input Types\n\nself:"
-                " DummyInterface[FakeLLM]\n\n\n# Inputs\n\nself:\n  a: -1\n\n\n# Output Type\n\nint\n\n# Execution"
-                " Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 0"
-            ),
-            (
-                "Execute the following function that is described via a doc string:\n\nAdd two numbers.\n\n# "
-                "Task\n\nExecute the function with the inputs that follow in the next section and finally return the "
-                "output using the output type\nas YAML document in an # Output section. (If the value is a literal, "
-                "then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in "
-                "Python.)\n\n# Dataclasses Schema\n\ntypes:\n  type:\n    a:\n      type: int\n\n\n# Input Types\n\na: "
-                "int\nb: int\ncls: type\n\n\n# Inputs\n\na: 1\nb: 2\ncls: <class "
-                "'llm_strategy.llm_strategy.DummyInterface[FakeLLM]'>\n\n\n# Output Type\n\nint\n\n# Execution "
-                "Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 3"
-            ),
-            (
-                "Execute the following function that is described via a doc string:\n\nAdd two numbers.\n\n# "
-                "Task\n\nExecute the function with the inputs that follow in the next section and finally return the "
-                "output using the output type\nas YAML document in an # Output section. (If the value is a literal, "
-                "then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in "
-                "Python.)\n\n# Dataclasses Schema\n\ntypes:\n  DummyInterface:\n    a:\n      type: int\n  "
-                "DummyInterface[FakeLLM]:\n    a:\n      type: int\n    bases:\n    - DummyInterface\n\n\n# Input "
-                "Types\n\na: int\nb: int\nself: DummyInterface[FakeLLM]\n\n\n# Inputs\n\na: 1\nb: 2\nself:\n  a: "
-                "-1\n\n\n# Output Type\n\nint\n\n# Execution Scratch-Pad (Think Step by Step)\n\n\n# "
-                "Output\n\n---\nresult: 3"
+                "Execute the following function that is described via a doc string:\n\nAdd two numbers.\n\n#"
+                " Task\n\nExecute the function with the inputs that follow in the next section and finally return the"
+                " output using the output type\nas YAML document in an # Output section. (If the value is a literal,"
+                " then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in"
+                " Python.)\n\n# Dataclasses Schema\n\ntypes:\n  DummyInterface:\n    a:\n      type: int\n "
+                " FakeLLM_DummyInterface:\n    a:\n      type: int\n    bases:\n    - DummyInterface\n\n\n# Input"
+                " Types\n\na: int\nb: int\nself: FakeLLM_DummyInterface\n\n\n# Inputs\n\na: 1\nb: 2\nself:\n  a:"
+                " -1\n\n\n# Output Type\n\nint\n\n# Execution Scratch-Pad (Think Step by Step)\n\n\n#"
+                " Output\n\n---\nresult: 3"
             ),
             (
                 "Execute the following function that is described via a doc string:\n\nAdd two numbers.\n\n#"
@@ -170,9 +150,30 @@ def test_llm_strategy_dummy_interface():
                 " output using the output type\nas YAML document in an # Output section. (If the value is a literal,"
                 " then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in"
                 " Python.)\n\n# Input Types\n\na: int\nb: int\n\n\n# Inputs\n\na: 1\nb: 2\n\n\n# Output"
-                " Type\n\nint\n\n# Execution Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 3"
+                " Type\n\nint\n\n# Execution Scratch-Pad (Think Step by Step)\n\n1. Declare variable c and assign the"
+                " value of a + b\n2. Return the value of c\n\n# Output\n\n---\nresult: 3"
             ),
-        },
+            (
+                "Execute the following function that is described via a doc string:\n\nReturn 0.\n\n# Task\n\nExecute"
+                " the function with the inputs that follow in the next section and finally return the output using the"
+                " output type\nas YAML document in an # Output section. (If the value is a literal, then just write the"
+                " value. We parse the text in the\n# Output section using `yaml.safe_load` in Python.)\n\n# Dataclasses"
+                " Schema\n\ntypes:\n  DummyInterface:\n    a:\n      type: int\n  FakeLLM_DummyInterface:\n    a:\n    "
+                "  type: int\n    bases:\n    - DummyInterface\n\n\n# Input Types\n\nself:"
+                " FakeLLM_DummyInterface\n\n\n# Inputs\n\nself:\n  a: -1\n\n\n# Output Type\n\nint\n\n# Execution"
+                " Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 0"
+            ),
+            (
+                "Execute the following function that is described via a doc string:\n\nAdd two numbers.\n\n#"
+                " Task\n\nExecute the function with the inputs that follow in the next section and finally return the"
+                " output using the output type\nas YAML document in an # Output section. (If the value is a literal,"
+                " then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in"
+                " Python.)\n\n# Dataclasses Schema\n\ntypes:\n  type:\n    a:\n      type: int\n\n\n# Input Types\n\na:"
+                " int\nb: int\ncls: type\n\n\n# Inputs\n\na: 1\nb: 2\ncls: <class"
+                " 'llm_strategy.llm_strategy.FakeLLM_DummyInterface'>\n\n\n# Output Type\n\nint\n\n# Execution"
+                " Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 3"
+            ),
+        }
         # external_llm=OpenAI(),
     )
 
@@ -234,23 +235,23 @@ def test_llm_strategy():
     llm = FakeLLM(
         texts={
             (
-                "Execute the following function that is described via a doc string:\n\nFind the index of the customer"
-                " that matches the natural language query best.\n\n        We support semantic queries instead of SQL,"
-                ' so we can search for things like\n        "the customer that was born in 1990".\n\n        Args:\n '
-                "           query: Natural language query\n\n        Returns:\n            The index of the best"
-                " matching customer in the database.\n        \n\n# Task\n\nExecute the function with the inputs that"
-                " follow in the next section and finally return the output using the output type\nas YAML document in"
-                " an # Output section. (If the value is a literal, then just write the value. We parse the text in"
-                " the\n# Output section using `yaml.safe_load` in Python.)\n\n# Dataclasses Schema\n\ntypes:\n "
-                " Customer:\n    birthday:\n      type: str\n    city:\n      type: str\n    first_name:\n      type:"
-                " str\n    last_name:\n      type: str\n  CustomerDatabase:\n    customers:\n      type: '[Customer]'\n"
-                "  CustomerDatabase[FakeLLM]:\n    bases:\n    - CustomerDatabase\n    customers:\n      type:"
-                " '[Customer]'\n\n\n# Input Types\n\nquery: str\nself: CustomerDatabase[FakeLLM]\n\n\n#"
-                " Inputs\n\nquery: the customer that is from Denver\nself:\n  customers:\n  - birthday: 01/07/1985\n   "
-                " city: Denver\n    first_name: Emma\n    last_name: Miller\n  - birthday: 02/07/1978\n    city: San"
-                " Francisco\n    first_name: Linda\n    last_name: Smith\n  - birthday: 05/06/1976\n    city: New"
-                " York\n    first_name: John\n    last_name: Johnson\n\n\n# Output Type\n\nint\n\n# Execution"
-                " Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 0"
+                "Execute the following function that is described via a doc string:\n\n\n        Create mock queries"
+                " that match one of the mock customers better than the others.\n\n        We support semantic queries"
+                ' instead of SQL, so we can search for things like\n        "the customer that was born in 1990".\n  '
+                "      \n\n# Task\n\nExecute the function with the inputs that follow in the next section and finally"
+                " return the output using the output type\nas YAML document in an # Output section. (If the value is a"
+                " literal, then just write the value. We parse the text in the\n# Output section using `yaml.safe_load`"
+                " in Python.)\n\n# Dataclasses Schema\n\ntypes:\n  Customer:\n    birthday:\n      type: str\n   "
+                " city:\n      type: str\n    first_name:\n      type: str\n    last_name:\n      type: str\n "
+                " CustomerDatabase:\n    customers:\n      type: '[Customer]'\n  FakeLLM_CustomerDatabase:\n   "
+                " bases:\n    - CustomerDatabase\n    customers:\n      type: '[Customer]'\n\n\n# Input"
+                " Types\n\ncustomer_database: FakeLLM_CustomerDatabase\nnum_queries: int\n\n\n#"
+                " Inputs\n\ncustomer_database:\n  customers:\n  - birthday: '1965-12-21'\n    city: London\n   "
+                " first_name: John\n    last_name: Doe\n  - birthday: '1973-10-19'\n    city: Paris\n    first_name:"
+                " Jane\n    last_name: Smith\n  - birthday: '1975-07-04'\n    city: Tokyo\n    first_name: Bob\n   "
+                " last_name: Jones\nnum_queries: 3\n\n\n# Output Type\n\n[str]\n\n# Execution Scratch-Pad (Think Step"
+                " by Step)\n\n\n# Output\n\n---\nresult:\n- 'The customer that was born in 1965'\n- 'The customer that"
+                " lives in Tokyo'\n- 'The customer with the last name of Jones'"
             ),
             (
                 "Execute the following function that is described via a doc string:\n\nFind the index of the customer"
@@ -263,13 +264,13 @@ def test_llm_strategy():
                 " the\n# Output section using `yaml.safe_load` in Python.)\n\n# Dataclasses Schema\n\ntypes:\n "
                 " Customer:\n    birthday:\n      type: str\n    city:\n      type: str\n    first_name:\n      type:"
                 " str\n    last_name:\n      type: str\n  CustomerDatabase:\n    customers:\n      type: '[Customer]'\n"
-                "  CustomerDatabase[FakeLLM]:\n    bases:\n    - CustomerDatabase\n    customers:\n      type:"
-                " '[Customer]'\n\n\n# Input Types\n\nquery: str\nself: CustomerDatabase[FakeLLM]\n\n\n#"
-                " Inputs\n\nquery: the customer that has the last name Miller\nself:\n  customers:\n  - birthday:"
-                " 01/07/1985\n    city: Denver\n    first_name: Emma\n    last_name: Miller\n  - birthday: 02/07/1978\n"
-                "    city: San Francisco\n    first_name: Linda\n    last_name: Smith\n  - birthday: 05/06/1976\n   "
-                " city: New York\n    first_name: John\n    last_name: Johnson\n\n\n# Output Type\n\nint\n\n# Execution"
-                " Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 0"
+                "  FakeLLM_CustomerDatabase:\n    bases:\n    - CustomerDatabase\n    customers:\n      type:"
+                " '[Customer]'\n\n\n# Input Types\n\nquery: str\nself: FakeLLM_CustomerDatabase\n\n\n# Inputs\n\nquery:"
+                " The customer with the last name of Jones\nself:\n  customers:\n  - birthday: '1965-12-21'\n    city:"
+                " London\n    first_name: John\n    last_name: Doe\n  - birthday: '1973-10-19'\n    city: Paris\n   "
+                " first_name: Jane\n    last_name: Smith\n  - birthday: '1975-07-04'\n    city: Tokyo\n    first_name:"
+                " Bob\n    last_name: Jones\n\n\n# Output Type\n\nint\n\n# Execution Scratch-Pad (Think Step by"
+                " Step)\n\n\n# Output\n\n---\nresult: 2"
             ),
             (
                 "Execute the following function that is described via a doc string:\n\n\n        Create mock customers"
@@ -280,10 +281,9 @@ def test_llm_strategy():
                 " Schema\n\ntypes:\n  Customer:\n    birthday:\n      type: str\n    city:\n      type: str\n   "
                 " first_name:\n      type: str\n    last_name:\n      type: str\n\n\n# Input Types\n\nnum_customers:"
                 " int\n\n\n# Inputs\n\nnum_customers: 3\n\n\n# Output Type\n\n[Customer]\n\n# Execution Scratch-Pad"
-                " (Think Step by Step)\n\n\n# Output\n\n---\nresult:\n- birthday: 01/07/1985\n  city: Denver\n "
-                " first_name: Emma\n  last_name: Miller\n- birthday: 02/07/1978\n  city: San Francisco\n  first_name:"
-                " Linda\n  last_name: Smith\n- birthday: 05/06/1976\n  city: New York\n  first_name: John\n  last_name:"
-                " Johnson"
+                ' (Think Step by Step)\n\n\n# Output\n\n---\nresult:\n- birthday: "1965-12-21"\n  city: London\n '
+                ' first_name: John\n  last_name: Doe\n- birthday: "1973-10-19"\n  city: Paris\n  first_name: Jane\n '
+                ' last_name: Smith\n- birthday: "1975-07-04"\n  city: Tokyo\n  first_name: Bob\n  last_name: Jones'
             ),
             (
                 "Execute the following function that is described via a doc string:\n\nFind the index of the customer"
@@ -296,34 +296,34 @@ def test_llm_strategy():
                 " the\n# Output section using `yaml.safe_load` in Python.)\n\n# Dataclasses Schema\n\ntypes:\n "
                 " Customer:\n    birthday:\n      type: str\n    city:\n      type: str\n    first_name:\n      type:"
                 " str\n    last_name:\n      type: str\n  CustomerDatabase:\n    customers:\n      type: '[Customer]'\n"
-                "  CustomerDatabase[FakeLLM]:\n    bases:\n    - CustomerDatabase\n    customers:\n      type:"
-                " '[Customer]'\n\n\n# Input Types\n\nquery: str\nself: CustomerDatabase[FakeLLM]\n\n\n#"
-                " Inputs\n\nquery: the customer that was born in 1985\nself:\n  customers:\n  - birthday: 01/07/1985\n "
-                "   city: Denver\n    first_name: Emma\n    last_name: Miller\n  - birthday: 02/07/1978\n    city: San"
-                " Francisco\n    first_name: Linda\n    last_name: Smith\n  - birthday: 05/06/1976\n    city: New"
-                " York\n    first_name: John\n    last_name: Johnson\n\n\n# Output Type\n\nint\n\n# Execution"
-                " Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 0"
+                "  FakeLLM_CustomerDatabase:\n    bases:\n    - CustomerDatabase\n    customers:\n      type:"
+                " '[Customer]'\n\n\n# Input Types\n\nquery: str\nself: FakeLLM_CustomerDatabase\n\n\n# Inputs\n\nquery:"
+                " The customer that lives in Tokyo\nself:\n  customers:\n  - birthday: '1965-12-21'\n    city: London\n"
+                "    first_name: John\n    last_name: Doe\n  - birthday: '1973-10-19'\n    city: Paris\n    first_name:"
+                " Jane\n    last_name: Smith\n  - birthday: '1975-07-04'\n    city: Tokyo\n    first_name: Bob\n   "
+                " last_name: Jones\n\n\n# Output Type\n\nint\n\n# Execution Scratch-Pad (Think Step by Step)\n\n\n#"
+                " Output\n\n---\nresult: 2"
             ),
             (
-                "Execute the following function that is described via a doc string:\n\n\n        Create mock queries"
-                " that match one of the mock customers better than the others.\n\n        We support semantic queries"
-                ' instead of SQL, so we can search for things like\n        "the customer that was born in 1990".\n    '
-                "    \n\n# Task\n\nExecute the function with the inputs that follow in the next section and finally"
-                " return the output using the output type\nas YAML document in an # Output section. (If the value is a"
-                " literal, then just write the value. We parse the text in the\n# Output section using `yaml.safe_load`"
-                " in Python.)\n\n# Dataclasses Schema\n\ntypes:\n  Customer:\n    birthday:\n      type: str\n   "
-                " city:\n      type: str\n    first_name:\n      type: str\n    last_name:\n      type: str\n "
-                " CustomerDatabase:\n    customers:\n      type: '[Customer]'\n  CustomerDatabase[FakeLLM]:\n   "
-                " bases:\n    - CustomerDatabase\n    customers:\n      type: '[Customer]'\n\n\n# Input"
-                " Types\n\ncustomer_database: CustomerDatabase[FakeLLM]\nnum_queries: int\n\n\n#"
-                " Inputs\n\ncustomer_database:\n  customers:\n  - birthday: 01/07/1985\n    city: Denver\n   "
-                " first_name: Emma\n    last_name: Miller\n  - birthday: 02/07/1978\n    city: San Francisco\n   "
-                " first_name: Linda\n    last_name: Smith\n  - birthday: 05/06/1976\n    city: New York\n   "
-                " first_name: John\n    last_name: Johnson\nnum_queries: 3\n\n\n# Output Type\n\n[str]\n\n# Execution"
-                ' Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult:\n- "the customer that was born in'
-                ' 1985"\n- "the customer that is from Denver"\n- "the customer that has the last name Miller"'
+                "Execute the following function that is described via a doc string:\n\nFind the index of the customer"
+                " that matches the natural language query best.\n\n        We support semantic queries instead of SQL,"
+                ' so we can search for things like\n        "the customer that was born in 1990".\n\n        Args:\n '
+                "           query: Natural language query\n\n        Returns:\n            The index of the best"
+                " matching customer in the database.\n        \n\n# Task\n\nExecute the function with the inputs that"
+                " follow in the next section and finally return the output using the output type\nas YAML document in"
+                " an # Output section. (If the value is a literal, then just write the value. We parse the text in"
+                " the\n# Output section using `yaml.safe_load` in Python.)\n\n# Dataclasses Schema\n\ntypes:\n "
+                " Customer:\n    birthday:\n      type: str\n    city:\n      type: str\n    first_name:\n      type:"
+                " str\n    last_name:\n      type: str\n  CustomerDatabase:\n    customers:\n      type: '[Customer]'\n"
+                "  FakeLLM_CustomerDatabase:\n    bases:\n    - CustomerDatabase\n    customers:\n      type:"
+                " '[Customer]'\n\n\n# Input Types\n\nquery: str\nself: FakeLLM_CustomerDatabase\n\n\n# Inputs\n\nquery:"
+                " The customer that was born in 1965\nself:\n  customers:\n  - birthday: '1965-12-21'\n    city:"
+                " London\n    first_name: John\n    last_name: Doe\n  - birthday: '1973-10-19'\n    city: Paris\n   "
+                " first_name: Jane\n    last_name: Smith\n  - birthday: '1975-07-04'\n    city: Tokyo\n    first_name:"
+                " Bob\n    last_name: Jones\n\n\n# Output Type\n\nint\n\n# Execution Scratch-Pad (Think Step by"
+                " Step)\n\n\n\n# Output\n\n---\nresult: 0"
             ),
-        },
+        }
         # external_llm=OpenAI(),
     )
 

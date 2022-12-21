@@ -392,7 +392,7 @@ def deserialize_yaml(decoded_yaml, type_):  # noqa: C901
 
     Args:
         decoded_yaml: The dict to deserialize.
-        type_: The type of the dataclass.
+        origin_type_: The type of the dataclass.
 
     Returns:
         The deserialized object.
@@ -412,45 +412,45 @@ def deserialize_yaml(decoded_yaml, type_):  # noqa: C901
             >>> deserialize_yaml({'c': {'a': 1, 'b': "2"}}, Bar, {'Foo': {'a': {'type': 'int'}, 'b': {'type': 'str'}}})
             Bar(c=Foo(a=1, b='2'))
     """
-    type_ = typing.get_origin(type_) or type_
-    if isinstance(type_, types.NoneType):
+    origin_type_ = typing.get_origin(type_) or type_
+    if isinstance(origin_type_, types.NoneType):
         if decoded_yaml is None:
             return None
         else:
             raise ValueError(f"Expected None, but got {decoded_yaml} of type {type(decoded_yaml)}")
-    if type_ == typing.Union:
+    if origin_type_ == typing.Union:
         union_args = typing.get_args(type_)
         for union_type in union_args:
             with contextlib.suppress(yaml.YAMLError):
                 return deserialize_yaml(decoded_yaml, union_type)
-        raise ValueError(f"Could not deserialize {decoded_yaml} into {type_}.")
-    if type_ == list and typing.get_args(type_):
-        assert typing.get_args(type_) == 1, "Only one type argument is supported for lists."
+        raise ValueError(f"Could not deserialize {decoded_yaml} into {origin_type_}.")
+    if origin_type_ == list and typing.get_args(type_):
+        assert len(typing.get_args(type_)) == 1, "Only one type argument is supported for lists."
         item_type = typing.get_args(type_)[0]
         return [deserialize_yaml(item, item_type) for item in decoded_yaml]
-    if type_ == tuple and typing.get_args(type_):
+    if origin_type_ == tuple and typing.get_args(type_):
         assert len(decoded_yaml) == len(
             typing.get_args(type_)
         ), f"Expected {len(typing.get_args(type_))} items in tuple, but got {len(decoded_yaml)}."
         item_types = typing.get_args(type_)
         return tuple(deserialize_yaml(item, item_type) for item, item_type in zip(decoded_yaml, item_types))
-    if type_ == set and typing.get_args(type_):
+    if origin_type_ == set and typing.get_args(type_):
         assert len(typing.get_args(type_)) == 1, "Only one type argument is supported for sets."
         item_type = typing.get_args(type_)[0]
         return {deserialize_yaml(item, item_type) for item in decoded_yaml}
-    if type_ == dict and typing.get_args(type_):
+    if origin_type_ == dict and typing.get_args(type_):
         assert len(typing.get_args(type_)) == 2, "Only two type arguments are supported for dicts."
         item_type = typing.get_args(type_)[1]
         return {key: deserialize_yaml(item, item_type) for key, item in decoded_yaml.items()}
-    if isinstance(type_, type) and issubclass(type_, Enum):
-        return type_[decoded_yaml]
-    if dataclasses.is_dataclass(type_):
+    if isinstance(origin_type_, type) and issubclass(origin_type_, Enum):
+        return origin_type_[decoded_yaml]
+    if dataclasses.is_dataclass(origin_type_):
         kwargs = {}
-        fields = dataclasses.fields(type_)
+        fields = dataclasses.fields(origin_type_)
         for field in fields:
             if field.name in decoded_yaml:
                 kwargs[field.name] = deserialize_yaml(decoded_yaml[field.name], field.type)
-        return type_(**kwargs)
+        return origin_type_(**kwargs)
 
     # Just return the values.
-    return type_(decoded_yaml)
+    return origin_type_(decoded_yaml)

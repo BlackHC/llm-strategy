@@ -152,8 +152,8 @@ def {long_unlikely__member_name}(*args, **kwargs):
 """
             )
 
-    SpecificLLMImplementation.__name__ = f"{dataclass_type.__name__}[{llm.__class__.__name__}]"
-    SpecificLLMImplementation.__qualname__ = f"{dataclass_type.__qualname__}[{llm.__class__.__name__}]"
+    SpecificLLMImplementation.__name__ = f"{llm.__class__.__name__}_{dataclass_type.__name__}"
+    SpecificLLMImplementation.__qualname__ = f"{llm.__class__.__name__}_{dataclass_type.__qualname__}"
 
     del long_unlikely__member_name, long_unlikely__member
     del long_unlikely_prefix__llm, long_unlikely__dataclasses_schema
