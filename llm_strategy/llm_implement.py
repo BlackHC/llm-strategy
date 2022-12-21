@@ -87,18 +87,12 @@ def unwrap_function(f):
     # is f a static method?
     elif isinstance(f, staticmethod):
         f = f.__func__
-    # is f a bound method?
-    elif hasattr(f, "__self__"):
+    elif inspect.ismethod(f):
         f = f.__func__
     else:
         return f
 
     return unwrap_function(f)
-
-
-@dataclass
-class DataWrapper:
-    data: typing.Any
 
 
 @dataclass
@@ -138,11 +132,21 @@ class LLMCall:
 
         return llm_call
 
+    @staticmethod
+    def _seralize_input(input_value):
+        """Serialize an input value to a string."""
+        if isinstance(input_value, type):
+            return str(input_value)
+        elif dataclasses.is_dataclass(input_value):
+            return dataclasses.asdict(input_value)
+        else:
+            return input_value
+
     def __call__(self, *args, **kwargs):
         bound_inputs = self.signature.bind(*args, **kwargs)
         bound_inputs.apply_defaults()
         inputs = {
-            name: dataclasses.asdict(DataWrapper(value))["data"] for name, value in bound_inputs.arguments.items()
+            name: self._seralize_input(value) for name, value in bound_inputs.arguments.items()
         }
         inputs_yaml_block = yaml.safe_dump(inputs)
 

@@ -73,21 +73,26 @@ def llm_strategy(llm, parent_dataclasses_schema: DataclassesSchema | None = None
                 # Create an instance of the implemented dataclass using the fields from f
                 params = {field.name: getattr(f, field.name) for field in dataclasses.fields(f)}
                 return implemented_dataclass(**params)
-        elif isinstance(f, property):
-            return property(llm_strategy(f.fget, parent_dataclasses_schema))
         elif isinstance(f, classmethod):
-            return classmethod(llm_strategy(f.__func__, parent_dataclasses_schema))
+            return classmethod(decorator(f.__func__))
         elif isinstance(f, staticmethod):
-            return staticmethod(llm_strategy(f.__func__, parent_dataclasses_schema))
+            return staticmethod(decorator(f.__func__))
+        elif isinstance(f, property):
+            return property(decorator(f.fget), doc=f.__doc__)
         elif isinstance(f, types.MethodType):
-            return types.MethodType(llm_strategy(f.__func__, parent_dataclasses_schema), f.__self__)
+            return types.MethodType(decorator(f.__func__), f.__self__)
+        # Does the function have a __wrapped__ attribute?
+        elif hasattr(f, "__wrapped__"):
+            # If so, it is a wrapped function. Unwrap it.
+            return decorator(f.__wrapped__)
         elif isinstance(f, LLMCall):
             return f
         elif callable(f):
+            llm_call = LLMCall.wrap_callable(f, llm, parent_dataclasses_schema)
 
             @functools.wraps(f)
             def wrapper(*args, **kwargs):
-                return LLMCall.wrap_callable(f, llm, parent_dataclasses_schema)(*args, **kwargs)
+                return llm_call(*args, **kwargs)
 
             return wrapper
         else:
@@ -100,12 +105,20 @@ def can_wrap_member_in_llm(f):
     """
     Return True if f can be wrapped in an LLMCall.
     """
+    # An existing LLMCall was already determined to be wrappable.
+    if isinstance(f, LLMCall):
+        return True
+    if dataclasses.is_dataclass(f):
+        return True
+
     unwrapped = unwrap_function(f)
     if not callable(unwrapped):
         return False
     if inspect.isgeneratorfunction(unwrapped):
         return False
     if inspect.iscoroutinefunction(unwrapped):
+        return False
+    if not inspect.isfunction(unwrapped) and not inspect.ismethod(unwrapped):
         return False
     return check_not_implemented(unwrapped)
 
@@ -124,22 +137,15 @@ def llm_strategy_dataclass(
     @dataclass
     class SpecificLLMImplementation(dataclass_type):
         global long_unlikely__member_name, long_unlikely__member
-        for long_unlikely__member_name, long_unlikely__member in dataclass_type.__dict__.items():
-            if can_wrap_member_in_llm(long_unlikely__member):
-                #                 exec(
-                #                     f"""
-                # {long_unlikely__member_name} = functools.wraps(long_unlikely__member)(
-                #     llm_implement(long_unlikely__member, long_unlikely_prefix__llm, long_unlikely__dataclasses_schema)
-                # )"""
-                #                 )
-                exec(
-                    f"""
+        for long_unlikely__member_name, long_unlikely__member in inspect.getmembers_static(dataclass_type, can_wrap_member_in_llm):
+            exec(
+                f"""
 @llm_strategy(long_unlikely_prefix__llm, long_unlikely__dataclasses_schema)
 @functools.wraps(long_unlikely__member)
 def {long_unlikely__member_name}(*args, **kwargs):
     raise NotImplementedError()
-    """
-                )
+"""
+            )
 
     SpecificLLMImplementation.__name__ = f"{dataclass_type.__name__}[{llm.__class__.__name__}]"
     SpecificLLMImplementation.__qualname__ = f"{dataclass_type.__qualname__}[{llm.__class__.__name__}]"
