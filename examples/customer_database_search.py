@@ -85,30 +85,22 @@ class CustomerDatabaseApp(App):
     in a search box at the bottom of the screen.
     """
 
-    BINDINGS = [("q", "exit", "Exit the application")]
+    PRIORITY_BINDINGS = False
+    BINDINGS = [("q", "quit", "Quit the application"), ("s", "screenshot", "Take a screenshot")]
 
     database: CustomerDatabase = MockCustomerDatabase([])
 
     data_table = DataTable(id="customer_table")
     search_box = Input(id="search_box", placeholder="Search for a customer (use any kind of query")
-    exit_button = Button("Exit")
-    footer_bar = Horizontal(search_box, exit_button)
+    footer_bar = Horizontal(search_box)
 
     def on_mount(self) -> None:
         self.database.load()
 
         self.data_table.add_columns("First Name", "Last Name", "Birthdate", "Address", "Age")
-
         self.search("")
 
-    def action_exit(self) -> None:
-        self.exit()
-
     def compose(self) -> ComposeResult:
-        self.exit_button.styles.min_width = 10
-        self.exit_button.styles.dock = "right"
-        self.search_box.styles.width = "100%"
-
         self.footer_bar.styles.dock = "bottom"
         self.footer_bar.styles.width = "100%"
         self.footer_bar.styles.height = 4
@@ -116,6 +108,7 @@ class CustomerDatabaseApp(App):
         self.data_table.styles.height = "auto"
         self.data_table.styles.width = "100%"
         self.screen.styles.height = "100%"
+        self.search_box.styles.width = "100%"
 
         yield Header()
         yield self.footer_bar
