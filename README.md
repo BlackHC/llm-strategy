@@ -18,6 +18,11 @@ It uses the doc strings, type annotations, and method/function names as prompts 
 ## Example
 
 ```python
+from dataclasses import dataclass
+from llm_strategy import llm_strategy
+from langchain.llms import OpenAI
+
+
 @llm_strategy(OpenAI(max_tokens=256))
 @dataclass
 class Customer:
