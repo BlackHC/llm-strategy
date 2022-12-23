@@ -19,10 +19,6 @@ class FakeLLM(LLM, BaseModel):
     This also means that there is no non-determinism in the output, which is good for testing, but bad for variance.
     Especially if we want to test the behavior of the LLM wrapper when the LLM is not deterministic. (Create different
     outputs for different calls, for example.)
-
-    Args:
-        texts: The texts to return.
-        external_llm: An external LLM to use if the query is not found.
     """
 
     texts: set[str] = set()
