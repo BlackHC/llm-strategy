@@ -18,6 +18,7 @@ docstring-parser = "^0.15"
 parse = "^1.19.0"
 typing-extensions = "^4.4.0"
 pyyaml = "^6.0"
+pydantic = "^1.10.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
@@ -71,4 +72,7 @@ skip_empty = true
 [tool.coverage.run]
 branch = true
 source = ["llm_strategy"]
+
+[tool.deptry]
+extend_exclude = [".*/tests/.*", "examples/.*", "docs/.*"]
 
