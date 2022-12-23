@@ -149,6 +149,16 @@ def test_llm_strategy_dummy_interface():
                 " Task\n\nExecute the function with the inputs that follow in the next section and finally return the"
                 " output using the output type\nas YAML document in an # Output section. (If the value is a literal,"
                 " then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in"
+                " Python.)\n\n# Dataclasses Schema\n\ntypes:\n  type:\n    a:\n      type: int\n\n\n# Input Types\n\na:"
+                " int\nb: int\ncls: type\n\n\n# Inputs\n\na: 1\nb: 2\ncls: <class"
+                " 'llm_strategy.llm_strategy.FakeLLM_DummyInterface'>\n\n\n# Output Type\n\nint\n\n# Execution"
+                " Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 3"
+            ),
+            (
+                "Execute the following function that is described via a doc string:\n\nAdd two numbers.\n\n#"
+                " Task\n\nExecute the function with the inputs that follow in the next section and finally return the"
+                " output using the output type\nas YAML document in an # Output section. (If the value is a literal,"
+                " then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in"
                 " Python.)\n\n# Input Types\n\na: int\nb: int\n\n\n# Inputs\n\na: 1\nb: 2\n\n\n# Output"
                 " Type\n\nint\n\n# Execution Scratch-Pad (Think Step by Step)\n\n1. Declare variable c and assign the"
                 " value of a + b\n2. Return the value of c\n\n# Output\n\n---\nresult: 3"
@@ -170,7 +180,7 @@ def test_llm_strategy_dummy_interface():
                 " then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in"
                 " Python.)\n\n# Dataclasses Schema\n\ntypes:\n  type:\n    a:\n      type: int\n\n\n# Input Types\n\na:"
                 " int\nb: int\ncls: type\n\n\n# Inputs\n\na: 1\nb: 2\ncls: <class"
-                " 'llm_strategy.llm_strategy.FakeLLM_DummyInterface'>\n\n\n# Output Type\n\nint\n\n# Execution"
+                " 'llm_strategy.decorators.FakeLLM_DummyInterface'>\n\n\n# Output Type\n\nint\n\n# Execution"
                 " Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 3"
             ),
         }
