@@ -17,3 +17,4 @@ repos:
           - flake8-bugbear==22.9.23
           - flake8-comprehensions==3.10.0
           - flake8-simplify==0.19.3
+

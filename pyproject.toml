@@ -11,25 +11,28 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8.1,<4.0"
+python = ">=3.9,<4.0"
 langchain = "^0.0.42"
 openai = "^0.25.0"
 docstring-parser = "^0.15"
 parse = "^1.19.0"
+typing-extensions = "^4.4.0"
+pyyaml = "^6.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
 pytest-cov = "^4.0.0"
-deptry = "^0.6.4"
-mypy = "^0.981"
+deptry = "^0.6.6"
+mypy = "^0.991"
 pre-commit = "^2.20.0"
-tox = "^3.25.1"
+tox = "^3.28.0"
+types-pyyaml = "^6.0.12.2"
+types-dataclasses = "^0.6.6"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.4.2"
-mkdocs-material = "^8.5.10"
-mkdocstrings = {extras = ["python"], version = "^0.19.0"}
-
+mkdocs-material = "^8.5.11"
+mkdocstrings = {extras = ["python"], version = "^0.19.1"}
 
 [tool.poetry.group.examples.dependencies]
 textual = {version = "^0.7.0", extras = ["dev"]}
@@ -55,6 +58,8 @@ check_untyped_defs = "True"
 warn_return_any = "True"
 warn_unused_ignores = "True"
 show_error_codes = "True"
+exclude = "tests/"
+ignore_missing_imports = "True"
 
 [tool.coverage.report]
 skip_empty = true

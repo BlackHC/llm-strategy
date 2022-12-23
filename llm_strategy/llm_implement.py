@@ -78,7 +78,7 @@ as YAML document in an # Output section. (If the value is a literal, then just w
         return raw_response
 
 
-def unwrap_function(f):
+def unwrap_function(f: typing.Callable[P, T]) -> typing.Callable[P, T]:
     # is f a property?
     if isinstance(f, property):
         f = f.fget
@@ -106,7 +106,9 @@ class LLMCall:
     llm: BaseLLM
 
     @staticmethod
-    def wrap_callable(f: typing.Callable, llm, parent_dataclasses_schema: DataclassesSchema | None = None) -> "LLMCall":
+    def wrap_callable(
+        f: typing.Callable, llm: BaseLLM, parent_dataclasses_schema: DataclassesSchema | None = None
+    ) -> "LLMCall":
         """Create an LLMCall from a function."""
         unwrapped_f = unwrap_function(f)
 
@@ -131,7 +133,7 @@ class LLMCall:
         return llm_call
 
     @staticmethod
-    def _seralize_input(input_value):
+    def _seralize_input(input_value: object) -> object:
         """Serialize an input value to a string."""
         if isinstance(input_value, type):
             return str(input_value)
@@ -140,7 +142,7 @@ class LLMCall:
         else:
             return input_value
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs):  # type: ignore
         bound_inputs = self.signature.bind(*args, **kwargs)
         bound_inputs.apply_defaults()
         inputs = {name: self._seralize_input(value) for name, value in bound_inputs.arguments.items()}
@@ -182,6 +184,8 @@ class LLMCall:
         return result
 
 
-def llm_implement(f, llm: BaseLLM, parent_dataclasses_schema: DataclassesSchema | None = None):
+def llm_implement(
+    f: typing.Callable[P, T], llm: BaseLLM, parent_dataclasses_schema: DataclassesSchema | None = None
+) -> typing.Callable[P, T]:
     """Create an LLMCall from a function."""
     return LLMCall.wrap_callable(f, llm, parent_dataclasses_schema)

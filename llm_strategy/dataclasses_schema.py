@@ -76,10 +76,10 @@ def pretty_type_str(type_: typing.Any) -> str:  # noqa: C901
         if not typing.get_args(type_) or typing.get_args(type_)[0] == typing.Any:
             return "set"
         return f"{{{pretty_type_str(typing.get_args(type_)[0])}}}"
-    return type_.__name__
+    return type_.__name__  # type: ignore
 
 
-def get_type_and_metadata_entry(field) -> dict[str, typing.Any]:
+def get_type_and_metadata_entry(field: dataclasses.Field) -> dict[str, str | typing.Sequence]:
     # Support annotations
     if typing.get_origin(field.type) == typing_extensions.Annotated:
         type_ = typing.get_args(field.type)[0]
@@ -90,7 +90,7 @@ def get_type_and_metadata_entry(field) -> dict[str, typing.Any]:
     return entry
 
 
-def is_valid_schema_type(type_):
+def is_valid_schema_type(type_: type) -> bool:
     return (
         dataclasses.is_dataclass(type_)
         or type_ in VALID_TYPES
@@ -115,7 +115,7 @@ class DataclassesSchema:
         definitions = ChainMap[str, Definition]({}, parent.definitions)
         return DataclassesSchema(definitions)
 
-    def add_complex_type(self, type_: type, add_subclasses=True):  # noqa: C901
+    def add_complex_type(self, type_: type, add_subclasses: bool = True) -> None:  # noqa: C901
         # Step through Annotated types
         origin_type = typing.get_origin(type_) or type_
         if origin_type == typing_extensions.Annotated:
@@ -151,7 +151,7 @@ class DataclassesSchema:
         elif not is_valid_schema_type(type_):
             raise ValueError(f"Unsupported type {type_}")
 
-    def add_complex_value(self, value, add_subclasses=False):
+    def add_complex_value(self, value: object, add_subclasses: bool = False) -> None:
         if type(value).__name__ in self.definitions:
             return
 
@@ -169,7 +169,7 @@ class DataclassesSchema:
         elif not is_valid_schema_type(type(value)):
             raise ValueError(f"Unsupported value {value}")
 
-    def add_enum_type(self, enum_type: type):
+    def add_enum_type(self, enum_type: type) -> None:
         assert issubclass(enum_type, Enum)
         self.definitions[enum_type.__name__] = {"type": "enum", "values": {member.name for member in enum_type}}
 
@@ -178,7 +178,7 @@ class DataclassesSchema:
         dataclass_type: type,
         *,
         add_subclasses: bool = True,
-    ):
+    ) -> None:
         """Add a dataclass type to the schema.
 
         Recursively convert nested dataclasses and other complex types.
@@ -220,7 +220,7 @@ class DataclassesSchema:
 
         self._process_class_hierarchy(dataclass_type, add_subclasses)
 
-    def _process_class_hierarchy(self, dataclass_type, add_subclasses):
+    def _process_class_hierarchy(self, dataclass_type: type, add_subclasses: bool) -> None:
         schema = self.definitions[dataclass_type.__name__]
 
         # Add base classes
@@ -235,7 +235,7 @@ class DataclassesSchema:
             for subclass in dataclass_type.__subclasses__():
                 self.add_dataclass_type(subclass, add_subclasses=True)
 
-    def add_dataclass(self, dataclass_instance: T, *, add_subclasses=False):
+    def add_dataclass(self, dataclass_instance: T, *, add_subclasses: bool = False) -> None:
         """Add a dataclass to the schema.
 
         Recursively add nested dataclasses and other complex types.
@@ -285,7 +285,7 @@ class DataclassesSchema:
 
         self._process_class_hierarchy(dataclass_instance.__class__, add_subclasses)
 
-    def add_return_annotation(self, signature: inspect.Signature, *, add_subclasses=True):
+    def add_return_annotation(self, signature: inspect.Signature, *, add_subclasses: bool = True) -> None:
         """
         Add the return annotation to the schema.
 
@@ -308,7 +308,7 @@ class DataclassesSchema:
         ), f"Unsupported return type {signature.return_annotation}!"
         self.add_complex_type(signature.return_annotation, add_subclasses=add_subclasses)
 
-    def add_signature(self, signature: inspect.Signature, *, add_subclasses=True):
+    def add_signature(self, signature: inspect.Signature, *, add_subclasses: bool = True) -> None:
         """
         Add the signature to the schema.
 
@@ -348,8 +348,8 @@ class DataclassesSchema:
         self,
         bound_arguments: inspect.BoundArguments,
         *,
-        add_subclasses=False,
-    ):
+        add_subclasses: bool = False,
+    ) -> None:
         """Add any dataclasses from BoundArguments to the schema.
 
         Args:
@@ -384,7 +384,7 @@ class DataclassesSchema:
             self.add_complex_value(value, add_subclasses=add_subclasses)
 
 
-def deserialize_yaml(decoded_yaml, type_):  # noqa: C901
+def deserialize_yaml(decoded_yaml: object, type_: type) -> object:  # noqa: C901
     """
     Deserialize `decoded_yaml` into an instance of `type_`. If `decoded_yaml` is a dict, then
     `type_` can be a dataclass; if `decoded_yaml` is a list, then `type_` can be a
@@ -392,7 +392,7 @@ def deserialize_yaml(decoded_yaml, type_):  # noqa: C901
 
     Args:
         decoded_yaml: The dict to deserialize.
-        origin_type_: The type of the dataclass.
+        type_: The type of the dataclass.
 
     Returns:
         The deserialized object.
@@ -425,26 +425,32 @@ def deserialize_yaml(decoded_yaml, type_):  # noqa: C901
                 return deserialize_yaml(decoded_yaml, union_type)
         raise ValueError(f"Could not deserialize {decoded_yaml} into {origin_type_}.")
     if origin_type_ == list and typing.get_args(type_):
+        assert isinstance(decoded_yaml, typing.Sequence), f"Expected sequence, but got {decoded_yaml}."
         assert len(typing.get_args(type_)) == 1, "Only one type argument is supported for lists."
         item_type = typing.get_args(type_)[0]
         return [deserialize_yaml(item, item_type) for item in decoded_yaml]
     if origin_type_ == tuple and typing.get_args(type_):
+        assert isinstance(decoded_yaml, typing.Sequence), f"Expected sequence, but got {decoded_yaml}."
         assert len(decoded_yaml) == len(
             typing.get_args(type_)
         ), f"Expected {len(typing.get_args(type_))} items in tuple, but got {len(decoded_yaml)}."
         item_types = typing.get_args(type_)
         return tuple(deserialize_yaml(item, item_type) for item, item_type in zip(decoded_yaml, item_types))
     if origin_type_ == set and typing.get_args(type_):
+        assert isinstance(decoded_yaml, typing.Sequence), f"Expected sequence, but got {decoded_yaml}."
         assert len(typing.get_args(type_)) == 1, "Only one type argument is supported for sets."
         item_type = typing.get_args(type_)[0]
         return {deserialize_yaml(item, item_type) for item in decoded_yaml}
     if origin_type_ == dict and typing.get_args(type_):
+        assert isinstance(decoded_yaml, dict), f"Expected dict, but got {decoded_yaml}."
         assert len(typing.get_args(type_)) == 2, "Only two type arguments are supported for dicts."
         item_type = typing.get_args(type_)[1]
         return {key: deserialize_yaml(item, item_type) for key, item in decoded_yaml.items()}
     if isinstance(origin_type_, type) and issubclass(origin_type_, Enum):
+        assert isinstance(decoded_yaml, str), f"Expected str, but got {decoded_yaml}."
         return origin_type_[decoded_yaml]
     if dataclasses.is_dataclass(origin_type_):
+        assert isinstance(decoded_yaml, dict), f"Expected dict, but got {decoded_yaml} of type {type(decoded_yaml)}."
         kwargs = {}
         fields = dataclasses.fields(origin_type_)
         for field in fields:
@@ -453,4 +459,5 @@ def deserialize_yaml(decoded_yaml, type_):  # noqa: C901
         return origin_type_(**kwargs)
 
     # Just return the values.
-    return origin_type_(decoded_yaml)
+    assert isinstance(decoded_yaml, origin_type_), f"Expected {origin_type_}, but got {decoded_yaml}."
+    return decoded_yaml

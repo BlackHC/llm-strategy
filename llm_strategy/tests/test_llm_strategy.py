@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from llm_strategy.llm_strategy import (
+from llm_strategy.decorators import (
     can_wrap_member_in_llm,
     check_not_implemented,
     llm_strategy,

@@ -28,7 +28,7 @@ class FakeLLM(LLM, BaseModel):
     texts: set[str] = set()
     external_llm: BaseLLM | None = None
 
-    def __del__(self):
+    def __del__(self) -> None:
         # If we have an external LLM, we write out all our responses to stdout so that they can be copied into the
         # constructor call for the next run by hand if needed.
         if self.external_llm is not None:

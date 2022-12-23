@@ -1,3 +1,4 @@
+# type: ignore
 import dataclasses
 import dis
 import functools
@@ -12,6 +13,7 @@ from langchain.llms.base import BaseLLM
 from llm_strategy.dataclasses_schema import DataclassesSchema
 from llm_strategy.llm_implement import LLMCall, unwrap_function
 
+P = typing_extensions.ParamSpec("P")
 T = typing.TypeVar("T")
 
 
@@ -59,13 +61,14 @@ def check_not_implemented(f: typing.Callable) -> bool:
 
 
 def llm_strategy(  # noqa: C901
-    llm, parent_dataclasses_schema: DataclassesSchema | None = None
+    llm: BaseLLM, parent_dataclasses_schema: DataclassesSchema | None = None
 ) -> typing.Callable[[T], T]:
     """
     A strategy that implements what ever it decorates (or is called on) using the LLM.
     """
 
-    def decorator(f):
+    @typing.no_type_check
+    def decorator(f: T) -> T:
         # For an instance of dataclass, call llm_strategy_dataclass with the fields.
         if dataclasses.is_dataclass(f):
             if isinstance(f, type):
@@ -103,7 +106,7 @@ def llm_strategy(  # noqa: C901
     return decorator
 
 
-def can_wrap_member_in_llm(f):
+def can_wrap_member_in_llm(f: typing.Callable[P, T]) -> bool:
     """
     Return True if f can be wrapped in an LLMCall.
     """
@@ -126,12 +129,12 @@ def can_wrap_member_in_llm(f):
 
 
 @typing_extensions.dataclass_transform()
-@typing.no_type_check
 def llm_strategy_dataclass(
     dataclass_type: type, llm: BaseLLM, parent_dataclasses_schema: DataclassesSchema | None = None
 ) -> type:
     global long_unlikely__dataclasses_schema
     global long_unlikely_prefix__llm
+    global long_unlikely__member_name, long_unlikely__member
     long_unlikely_prefix__llm = llm
     long_unlikely__dataclasses_schema = parent_dataclasses_schema
     long_unlikely__member_name, long_unlikely__member = None, None
@@ -139,7 +142,6 @@ def llm_strategy_dataclass(
     @dataclass
     class SpecificLLMImplementation(dataclass_type):
         global long_unlikely__member_name, long_unlikely__member
-        # type: ignore
         for long_unlikely__member_name, long_unlikely__member in inspect.getmembers_static(  # noqa: B007
             dataclass_type, can_wrap_member_in_llm
         ):

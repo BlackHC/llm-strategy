@@ -1,1 +1,1 @@
-from llm_strategy.llm_strategy import llm_strategy
+from llm_strategy.decorators import llm_strategy  # type: ignore

@@ -70,6 +70,7 @@ def extract_prompt_template(docstring: str) -> typing.Optional[str]:
         ... -------
         ... output : int
         ...     This is the output.
+        ...
         ...'''
         >>> extract_prompt_template(example_numpy_docstring)
         'This is the prompt.'

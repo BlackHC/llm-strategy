@@ -15,6 +15,9 @@ class PromptResult(typing.Generic[T]):
     response: str
 
 
+TT = TypeVar("TT", bound="PromptTemplateMixin")
+
+
 @dataclass
 class PromptTemplateMixin:
     """
@@ -30,13 +33,13 @@ class PromptTemplateMixin:
         return self.__class__.prompt_template.format(**vars(self))
 
     @classmethod
-    def parse(cls, text: str):
+    def parse(cls: type[TT], text: str) -> TT:
         result = parse.parse(cls.prompt_template, text)
         if result is None:
             raise ValueError(f"Could not parse prompt {text}")
         assert len(result.fixed) == 0
-        assert set(result.named.keys()) == set(cls.__dataclass_fields__.keys()) - {"prompt_template"}  # type: ignore
-        prompt_instance = cls(**result.named)  # type: ignore
+        assert set(result.named.keys()) == set(cls.__dataclass_fields__.keys()) - {"prompt_template"}
+        prompt_instance = cls(**result.named)
         return prompt_instance
 
     def __call__(self, lmm: BaseLLM) -> PromptResult[typing_extensions.Self]:  # type: ignore
