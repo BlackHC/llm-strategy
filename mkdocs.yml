@@ -9,15 +9,24 @@ copyright: Maintained by <a href="https://blackhc.com">Florian</a>.
 
 nav:
   - Home: index.md
-  - Modules: modules.md
+  - Code Reference: reference/
 plugins:
   - search
+  - gen-files:
+      scripts:
+        - docs/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+  - include-markdown
   - mkdocstrings:
       handlers:
         python:
             setup_commands:
                 - import sys
-                - sys.path.append('../')
+                - sys.path.append('../
+            options:
+              show_source: true
 theme:
   name: material
   feature:
