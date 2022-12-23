@@ -75,4 +75,6 @@ source = ["llm_strategy"]
 
 [tool.deptry]
 extend_exclude = [".*/tests/.*", "examples/.*", "docs/.*"]
-
+ignore_obsolete = [
+        "openai"
+]
