@@ -26,7 +26,9 @@ class FakeLLM(LLM, BaseModel):
     """
 
     texts: set[str] = set()
+    """The texts to return on call."""
     external_llm: BaseLLM | None = None
+    """An external LLM to use if the query is not found."""
 
     def __del__(self) -> None:
         # If we have an external LLM, we write out all our responses to stdout so that they can be copied into the
