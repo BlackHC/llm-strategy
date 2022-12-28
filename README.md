@@ -8,6 +8,8 @@
 
 Implementing the Strategy Pattern using LLMs.
 
+Also, please see https://blog.blackhc.net/2022/12/llm_software_engineering/ for a wider perspective on why this could be important in the future.
+
 This package adds a decorator `llm_strategy` that connects to an LLM (such as OpenAI’s GPT-3) and uses the LLM to "implement" abstract methods in interface classes. It does this by forwarding requests to the LLM and converting the responses back to Python data using Python's `@dataclasses`.
 
 It uses the doc strings, type annotations, and method/function names as prompts for the LLM, and can automatically convert the results back into Python types (currently only supporting `@dataclasses`). It can also extract a data schema to send to the LLM for interpretation. While the `llm-strategy` package still relies on some Python code, it has the potential to reduce the need for this code in the future by using additional, cheaper LLMs to automate the parsing of structured data.
