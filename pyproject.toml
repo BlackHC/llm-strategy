@@ -12,7 +12,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4.0"
-langchain = "^0.0.42"
+langchain = ">=0.0.42"
 openai = ">=0.25.0"
 docstring-parser = "^0.15"
 parse = "^1.19.0"
