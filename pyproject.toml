@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llm_strategy"
-version = "0.0.2"
+version = "0.0.3"
 description = "Directly Connecting Python to LLMs - Dataclasses & Interfaces <-> LLMs"
 authors = ["Andreas Kirsch, Daedalus Lab Ltd <blackhc@gmail.com>"]
 repository = "https://github.com/blackhc/llm-strategy"
