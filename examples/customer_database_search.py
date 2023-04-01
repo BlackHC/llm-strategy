@@ -13,9 +13,9 @@ from textual.widgets import Button, DataTable, Footer, Header, Input
 from llm_strategy import llm_strategy
 
 langchain.llm_cache = SQLiteCache()
+base_llm = OpenAI(max_tokens=1024)
 
 
-@llm_strategy(OpenAI(max_tokens=256))
 @dataclass
 class Customer:
     key: str
@@ -25,7 +25,7 @@ class Customer:
     address: str
 
     @property
-    def age(self) -> int:
+    def age(self: "Customer") -> int:
         """Return the current age of the customer.
 
         This is a computed property based on `birthdate` and the current year (2022).
@@ -34,11 +34,14 @@ class Customer:
         raise NotImplementedError()
 
 
+Customer = llm_strategy(base_llm)(Customer)
+
+
 @dataclass
 class CustomerDatabase:
     customers: list[Customer]
 
-    def find_customer_key(self, query: str) -> list[str]:
+    def find_customer_key(self: "CustomerDatabase", query: str) -> list[str]:
         """Find the keys of the customers that match a natural language query best (sorted by closeness to the match).
 
         We support semantic queries instead of SQL, so we can search for things like
@@ -52,16 +55,15 @@ class CustomerDatabase:
         """
         raise NotImplementedError()
 
-    def load(self):
+    def load(self: "CustomerDatabase"):
         """Load the customer database from a file."""
         raise NotImplementedError()
 
-    def store(self):
+    def store(self: "CustomerDatabase"):
         """Store the customer database to a file."""
         raise NotImplementedError()
 
 
-@llm_strategy(OpenAI(max_tokens=1024))
 @dataclass
 class MockCustomerDatabase(CustomerDatabase):
     def load(self):
@@ -76,6 +78,9 @@ class MockCustomerDatabase(CustomerDatabase):
         Create mock customers with believable data (our customers are world citizens).
         """
         raise NotImplementedError()
+
+
+MockCustomerDatabase = llm_strategy(base_llm)(MockCustomerDatabase)
 
 
 class CustomerDatabaseApp(App):

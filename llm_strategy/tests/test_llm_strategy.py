@@ -1,10 +1,7 @@
 from dataclasses import dataclass
 
-from llm_strategy.decorators import (
-    can_wrap_member_in_llm,
-    check_not_implemented,
-    llm_strategy,
-)
+from llm_strategy import llm_strategy
+from llm_strategy.llm_function import is_not_implemented
 from llm_strategy.testing.fake_llm import FakeLLM
 
 
@@ -20,24 +17,20 @@ class DummyInterface:
         raise NotImplementedError()
 
     @classmethod
-    def class_method(cls, a: int, b: int) -> int:
+    def class_method(cls: type, a: int, b: int) -> int:
         """Add two numbers."""
         raise NotImplementedError()
 
     @property
-    def property_getter(self) -> int:
+    def property_getter(self: "DummyInterface") -> int:
         """Return 0."""
         raise NotImplementedError()
 
-    def bound_method(self, a: int, b: int) -> int:
+    def bound_method(self: "DummyInterface", a: int, b: int) -> int:
         """Add two numbers."""
         raise NotImplementedError()
 
-    def bound_method_raises_class(self, a: int, b: int = 1) -> int:
-        """Add two numbers."""
-        raise NotImplementedError
-
-    def bound_method_implemented(self, b: int = 1) -> int:
+    def bound_method_implemented(self: "DummyInterface", b: int = 1) -> int:
         """Add two numbers."""
         return self.a + b
 
@@ -57,69 +50,65 @@ class DummyInterface:
         return 1
 
 
-def test_can_wrap_member_in_llm():
-    """Test that can_wrap_member_in_llm works as expected."""
-    # This automatically also checks check_not_implemented.
-    assert can_wrap_member_in_llm(DummyInterface.static_method)
-    assert can_wrap_member_in_llm(DummyInterface.bound_method)
-    assert can_wrap_member_in_llm(DummyInterface.class_method)
-    assert can_wrap_member_in_llm(DummyInterface.property_getter)
-    assert can_wrap_member_in_llm(DummyInterface.bound_method_raises_class)
-
-    assert not can_wrap_member_in_llm(DummyInterface.bound_method_implemented)
-    assert not can_wrap_member_in_llm(DummyInterface.static_method_implemented)
-    assert not can_wrap_member_in_llm(DummyInterface.class_method_implemented)
-    assert not can_wrap_member_in_llm(DummyInterface.property_getter_implemented)
-
-
 def not_implemented_function():
     raise NotImplementedError
 
 
-def test_check_not_implemented_functon():
-    assert check_not_implemented(not_implemented_function)
-    assert not check_not_implemented(lambda: 1)
+def test_is_not_implemented_functon():
+    assert is_not_implemented(not_implemented_function)
+    assert not is_not_implemented(lambda: 1)
 
 
 def test_llm_strategy_on_functions():
     def add_two_ints(a: int, b: int) -> int:
         """Add two integers."""
-        return a + b
+        raise NotImplementedError()
 
     def add_two_ints_with_default(a: int, b: int = 1) -> int:
         """Add two integers with a default value."""
-        return a + b
+        raise NotImplementedError()
 
     def add_two_ints_with_default_and_kwarg(*, a: int, c: int = 2) -> int:
         """Add two integers with a default value."""
-        return a + c
+        raise NotImplementedError()
 
     llm = FakeLLM(
         texts={
             (
-                "Execute the following function that is described via a doc string:\n\nAdd two integers.\n\n#"
-                " Task\n\nExecute the function with the inputs that follow in the next section and finally return the"
-                " output using the output type\nas YAML document in an # Output section. (If the value is a literal,"
-                " then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in"
-                " Python.)\n\n# Input Types\n\na: int\nb: int\n\n\n# Inputs\n\na: 1\nb: 2\n\n\n# Output"
-                " Type\n\nint\n\n# Execution Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 3"
+                'Add two integers.\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties":'
+                ' {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}}, "required": ["a",'
+                ' "b"]}\n```\n\nThe output should be formatted as a JSON instance that conforms to the JSON schema'
+                ' below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a'
+                ' list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}}\nthe object'
+                ' {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo":'
+                ' ["bar", "baz"]}} is not well-formatted.\n\nHere is the output schema:\n```\n{"properties":'
+                ' {"return_value": {"title": "Return Value", "type": "integer"}}, "required":'
+                ' ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"a": 1, "b":'
+                ' 2}\n```\n{"return_value": 3}\n'
             ),
             (
-                "Execute the following function that is described via a doc string:\n\nAdd two integers with a default"
-                " value.\n\n# Task\n\nExecute the function with the inputs that follow in the next section and finally"
-                " return the output using the output type\nas YAML document in an # Output section. (If the value is a"
-                " literal, then just write the value. We parse the text in the\n# Output section using `yaml.safe_load`"
-                " in Python.)\n\n# Input Types\n\na: int\nc: int\n\n\n# Inputs\n\na: 1\nc: 2\n\n\n# Output"
-                " Type\n\nint\n\n# Execution Scratch-Pad (Think Step by Step)\n\n\ndef add_two_integers(a, c=0):\n   "
-                ' """Add two integers with a default value."""\n    return a + c \n\n\n# Output\n\n---\nresult: 3'
+                "Add two integers with a default value.\nThe inputs are formatted as JSON using the following"
+                ' schema:\n```\n{"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "default":'
+                ' 1, "type": "integer"}}, "required": ["a"]}\n```\n\nThe output should be formatted as a JSON instance'
+                ' that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo":'
+                ' {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}},'
+                ' "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema.'
+                ' The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the output'
+                ' schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type": "integer"}},'
+                ' "required": ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"a": 1,'
+                ' "b": 1}\n```\n{"return_value": 2}\n'
             ),
             (
-                "Execute the following function that is described via a doc string:\n\nAdd two integers with a default"
-                " value.\n\n# Task\n\nExecute the function with the inputs that follow in the next section and finally"
-                " return the output using the output type\nas YAML document in an # Output section. (If the value is a"
-                " literal, then just write the value. We parse the text in the\n# Output section using `yaml.safe_load`"
-                " in Python.)\n\n# Input Types\n\na: int\nb: int\n\n\n# Inputs\n\na: 1\nb: 1\n\n\n# Output"
-                " Type\n\nint\n\n# Execution Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 2"
+                "Add two integers with a default value.\nThe inputs are formatted as JSON using the following"
+                ' schema:\n```\n{"properties": {"a": {"title": "A", "type": "integer"}, "c": {"title": "C", "default":'
+                ' 2, "type": "integer"}}, "required": ["a"]}\n```\n\nThe output should be formatted as a JSON instance'
+                ' that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo":'
+                ' {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}},'
+                ' "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema.'
+                ' The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the output'
+                ' schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type": "integer"}},'
+                ' "required": ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"a": 1,'
+                ' "c": 2}\n```\n{"return_value": 3}\n'
             ),
         },
         # external_llm=OpenAI(),
@@ -134,54 +123,43 @@ def test_llm_strategy_dummy_interface():
     llm = FakeLLM(
         texts={
             (
-                "Execute the following function that is described via a doc string:\n\nAdd two numbers.\n\n#"
-                " Task\n\nExecute the function with the inputs that follow in the next section and finally return the"
-                " output using the output type\nas YAML document in an # Output section. (If the value is a literal,"
-                " then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in"
-                " Python.)\n\n# Dataclasses Schema\n\ntypes:\n  DummyInterface:\n    a:\n      type: int\n "
-                " FakeLLM_DummyInterface:\n    a:\n      type: int\n    bases:\n    - DummyInterface\n\n\n# Input"
-                " Types\n\na: int\nb: int\nself: FakeLLM_DummyInterface\n\n\n# Inputs\n\na: 1\nb: 2\nself:\n  a:"
-                " -1\n\n\n# Output Type\n\nint\n\n# Execution Scratch-Pad (Think Step by Step)\n\n\n#"
-                " Output\n\n---\nresult: 3"
+                'Return 0.\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties": {"self":'
+                ' {"$ref": "#/definitions/DummyInterface"}}, "required": ["self"], "definitions": {"DummyInterface":'
+                ' {"title": "DummyInterface", "type": "object", "properties": {"a": {"title": "A", "default": -1,'
+                ' "type": "integer"}}}}}\n```\n\nThe output should be formatted as a JSON instance that conforms to the'
+                ' JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo",'
+                ' "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required":'
+                ' ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object'
+                ' {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the output'
+                ' schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type": "integer"}},'
+                ' "required": ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"self":'
+                ' {"a": -1}}\n```\n{"return_value": 0}\n'
             ),
             (
-                "Execute the following function that is described via a doc string:\n\nAdd two numbers.\n\n#"
-                " Task\n\nExecute the function with the inputs that follow in the next section and finally return the"
-                " output using the output type\nas YAML document in an # Output section. (If the value is a literal,"
-                " then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in"
-                " Python.)\n\n# Dataclasses Schema\n\ntypes:\n  type:\n    a:\n      type: int\n\n\n# Input Types\n\na:"
-                " int\nb: int\ncls: type\n\n\n# Inputs\n\na: 1\nb: 2\ncls: <class"
-                " 'llm_strategy.llm_strategy.FakeLLM_DummyInterface'>\n\n\n# Output Type\n\nint\n\n# Execution"
-                " Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 3"
+                'Add two numbers.\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties":'
+                ' {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}}, "required": ["a",'
+                ' "b"]}\n```\n\nThe output should be formatted as a JSON instance that conforms to the JSON schema'
+                ' below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a'
+                ' list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}}\nthe object'
+                ' {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo":'
+                ' ["bar", "baz"]}} is not well-formatted.\n\nHere is the output schema:\n```\n{"properties":'
+                ' {"return_value": {"title": "Return Value", "type": "integer"}}, "required":'
+                ' ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"a": 1, "b":'
+                ' 2}\n```\n{"return_value": 3}\n'
             ),
             (
-                "Execute the following function that is described via a doc string:\n\nAdd two numbers.\n\n#"
-                " Task\n\nExecute the function with the inputs that follow in the next section and finally return the"
-                " output using the output type\nas YAML document in an # Output section. (If the value is a literal,"
-                " then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in"
-                " Python.)\n\n# Input Types\n\na: int\nb: int\n\n\n# Inputs\n\na: 1\nb: 2\n\n\n# Output"
-                " Type\n\nint\n\n# Execution Scratch-Pad (Think Step by Step)\n\n1. Declare variable c and assign the"
-                " value of a + b\n2. Return the value of c\n\n# Output\n\n---\nresult: 3"
-            ),
-            (
-                "Execute the following function that is described via a doc string:\n\nReturn 0.\n\n# Task\n\nExecute"
-                " the function with the inputs that follow in the next section and finally return the output using the"
-                " output type\nas YAML document in an # Output section. (If the value is a literal, then just write the"
-                " value. We parse the text in the\n# Output section using `yaml.safe_load` in Python.)\n\n# Dataclasses"
-                " Schema\n\ntypes:\n  DummyInterface:\n    a:\n      type: int\n  FakeLLM_DummyInterface:\n    a:\n    "
-                "  type: int\n    bases:\n    - DummyInterface\n\n\n# Input Types\n\nself:"
-                " FakeLLM_DummyInterface\n\n\n# Inputs\n\nself:\n  a: -1\n\n\n# Output Type\n\nint\n\n# Execution"
-                " Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 0"
-            ),
-            (
-                "Execute the following function that is described via a doc string:\n\nAdd two numbers.\n\n#"
-                " Task\n\nExecute the function with the inputs that follow in the next section and finally return the"
-                " output using the output type\nas YAML document in an # Output section. (If the value is a literal,"
-                " then just write the value. We parse the text in the\n# Output section using `yaml.safe_load` in"
-                " Python.)\n\n# Dataclasses Schema\n\ntypes:\n  type:\n    a:\n      type: int\n\n\n# Input Types\n\na:"
-                " int\nb: int\ncls: type\n\n\n# Inputs\n\na: 1\nb: 2\ncls: <class"
-                " 'llm_strategy.decorators.FakeLLM_DummyInterface'>\n\n\n# Output Type\n\nint\n\n# Execution"
-                " Scratch-Pad (Think Step by Step)\n\n\n# Output\n\n---\nresult: 3"
+                'Add two numbers.\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties":'
+                ' {"self": {"$ref": "#/definitions/DummyInterface"}, "a": {"title": "A", "type": "integer"}, "b":'
+                ' {"title": "B", "type": "integer"}}, "required": ["self", "a", "b"], "definitions": {"DummyInterface":'
+                ' {"title": "DummyInterface", "type": "object", "properties": {"a": {"title": "A", "default": -1,'
+                ' "type": "integer"}}}}}\n```\n\nThe output should be formatted as a JSON instance that conforms to the'
+                ' JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo",'
+                ' "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required":'
+                ' ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object'
+                ' {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the output'
+                ' schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type": "integer"}},'
+                ' "required": ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"self":'
+                ' {"a": -1}, "a": 1, "b": 2}\n```\n{"return_value": 3}\n'
             ),
         }
         # external_llm=OpenAI(),
@@ -194,7 +172,11 @@ def test_llm_strategy_dummy_interface():
     assert llm_DummyInterface.static_method(1, 2) == 3
     assert llm_DummyInstance.bound_method(1, 2) == 3
     assert llm_DummyInterface.class_method(1, 2) == 3
-    assert llm_DummyInstance.bound_method_raises_class(1, 2) == 3
+
+    assert llm_DummyInterface.static_method_implemented(1, 2) == 3
+    assert llm_DummyInstance.bound_method_implemented(1) == 0
+    assert llm_DummyInterface.class_method_implemented(1, 2) == 3
+    assert llm_DummyInstance.property_getter_implemented == 1
 
 
 @dataclass
@@ -209,7 +191,7 @@ class Customer:
 class CustomerDatabase:
     customers: list[Customer]
 
-    def find_customer_index(self, query: str) -> int:
+    def find_customer_index(self: "CustomerDatabase", query: str) -> int:
         """Find the index of the customer that matches the natural language query best.
 
         We support semantic queries instead of SQL, so we can search for things like
@@ -245,93 +227,123 @@ def test_llm_strategy():
     llm = FakeLLM(
         texts={
             (
-                "Execute the following function that is described via a doc string:\n\n\n        Create mock queries"
-                " that match one of the mock customers better than the others.\n\n        We support semantic queries"
-                ' instead of SQL, so we can search for things like\n        "the customer that was born in 1990".\n  '
-                "      \n\n# Task\n\nExecute the function with the inputs that follow in the next section and finally"
-                " return the output using the output type\nas YAML document in an # Output section. (If the value is a"
-                " literal, then just write the value. We parse the text in the\n# Output section using `yaml.safe_load`"
-                " in Python.)\n\n# Dataclasses Schema\n\ntypes:\n  Customer:\n    birthday:\n      type: str\n   "
-                " city:\n      type: str\n    first_name:\n      type: str\n    last_name:\n      type: str\n "
-                " CustomerDatabase:\n    customers:\n      type: '[Customer]'\n  FakeLLM_CustomerDatabase:\n   "
-                " bases:\n    - CustomerDatabase\n    customers:\n      type: '[Customer]'\n\n\n# Input"
-                " Types\n\ncustomer_database: FakeLLM_CustomerDatabase\nnum_queries: int\n\n\n#"
-                " Inputs\n\ncustomer_database:\n  customers:\n  - birthday: '1965-12-21'\n    city: London\n   "
-                " first_name: John\n    last_name: Doe\n  - birthday: '1973-10-19'\n    city: Paris\n    first_name:"
-                " Jane\n    last_name: Smith\n  - birthday: '1975-07-04'\n    city: Tokyo\n    first_name: Bob\n   "
-                " last_name: Jones\nnum_queries: 3\n\n\n# Output Type\n\n[str]\n\n# Execution Scratch-Pad (Think Step"
-                " by Step)\n\n\n# Output\n\n---\nresult:\n- 'The customer that was born in 1965'\n- 'The customer that"
-                " lives in Tokyo'\n- 'The customer with the last name of Jones'"
+                "Create mock queries that match one of the mock customers better than the others.\n\nWe support"
+                ' semantic queries instead of SQL, so we can search for things like\n"the customer that was born in'
+                ' 1990".\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties":'
+                ' {"customer_database": {"$ref": "#/definitions/CustomerDatabase"}, "num_queries": {"title": "Num'
+                ' Queries", "default": 1, "type": "integer"}}, "required": ["customer_database"], "definitions":'
+                ' {"Customer": {"title": "Customer", "type": "object", "properties": {"first_name": {"title": "First'
+                ' Name", "type": "string"}, "last_name": {"title": "Last Name", "type": "string"}, "birthday":'
+                ' {"title": "Birthday", "type": "string"}, "city": {"title": "City", "type": "string"}}, "required":'
+                ' ["first_name", "last_name", "birthday", "city"]}, "CustomerDatabase": {"title": "CustomerDatabase",'
+                ' "type": "object", "properties": {"customers": {"title": "Customers", "type": "array", "items":'
+                ' {"$ref": "#/definitions/Customer"}}}, "required": ["customers"]}}}\n```\n\nThe output should be'
+                " formatted as a JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema"
+                ' {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items":'
+                ' {"type": "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted'
+                ' instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not'
+                ' well-formatted.\n\nHere is the output schema:\n```\n{"properties": {"return_value": {"title": "Return'
+                ' Value", "type": "array", "items": {"type": "string"}}}, "required": ["return_value"]}\n```\nNow'
+                ' output the results for the following inputs:\n```\n{"customer_database": {"customers":'
+                ' [{"first_name": "John", "last_name": "Smith", "birthday": "05/12/1991", "city": "New York"},'
+                ' {"first_name": "Jane", "last_name": "Doe", "birthday": "03/03/1988", "city": "London"},'
+                ' {"first_name": "Carol", "last_name": "Lee", "birthday": "07/01/1995", "city": "Berlin"}]},'
+                ' "num_queries": 3}\n```\n\nThe output should be:\n\n{"return_value": ["John Smith", "Jane Doe", "Carol'
+                ' Lee"]}'
             ),
             (
-                "Execute the following function that is described via a doc string:\n\nFind the index of the customer"
-                " that matches the natural language query best.\n\n        We support semantic queries instead of SQL,"
-                ' so we can search for things like\n        "the customer that was born in 1990".\n\n        Args:\n '
-                "           query: Natural language query\n\n        Returns:\n            The index of the best"
-                " matching customer in the database.\n        \n\n# Task\n\nExecute the function with the inputs that"
-                " follow in the next section and finally return the output using the output type\nas YAML document in"
-                " an # Output section. (If the value is a literal, then just write the value. We parse the text in"
-                " the\n# Output section using `yaml.safe_load` in Python.)\n\n# Dataclasses Schema\n\ntypes:\n "
-                " Customer:\n    birthday:\n      type: str\n    city:\n      type: str\n    first_name:\n      type:"
-                " str\n    last_name:\n      type: str\n  CustomerDatabase:\n    customers:\n      type: '[Customer]'\n"
-                "  FakeLLM_CustomerDatabase:\n    bases:\n    - CustomerDatabase\n    customers:\n      type:"
-                " '[Customer]'\n\n\n# Input Types\n\nquery: str\nself: FakeLLM_CustomerDatabase\n\n\n# Inputs\n\nquery:"
-                " The customer with the last name of Jones\nself:\n  customers:\n  - birthday: '1965-12-21'\n    city:"
-                " London\n    first_name: John\n    last_name: Doe\n  - birthday: '1973-10-19'\n    city: Paris\n   "
-                " first_name: Jane\n    last_name: Smith\n  - birthday: '1975-07-04'\n    city: Tokyo\n    first_name:"
-                " Bob\n    last_name: Jones\n\n\n# Output Type\n\nint\n\n# Execution Scratch-Pad (Think Step by"
-                " Step)\n\n\n# Output\n\n---\nresult: 2"
+                "Find the index of the customer that matches the natural language query best.\n\nWe support semantic"
+                ' queries instead of SQL, so we can search for things like\n"the customer that was born in'
+                ' 1990".\n\nArgs:\n    query: Natural language query\n\nReturns:\n    The index of the best matching'
+                " customer in the database.\nThe inputs are formatted as JSON using the following"
+                ' schema:\n```\n{"properties": {"self": {"$ref": "#/definitions/CustomerDatabase"}, "query": {"title":'
+                ' "Query", "type": "string"}}, "required": ["self", "query"], "definitions": {"Customer": {"title":'
+                ' "Customer", "type": "object", "properties": {"first_name": {"title": "First Name", "type": "string"},'
+                ' "last_name": {"title": "Last Name", "type": "string"}, "birthday": {"title": "Birthday", "type":'
+                ' "string"}, "city": {"title": "City", "type": "string"}}, "required": ["first_name", "last_name",'
+                ' "birthday", "city"]}, "CustomerDatabase": {"title": "CustomerDatabase", "type": "object",'
+                ' "properties": {"customers": {"title": "Customers", "type": "array", "items": {"$ref":'
+                ' "#/definitions/Customer"}}}, "required": ["customers"]}}}\n```\n\nThe output should be formatted as a'
+                ' JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties":'
+                ' {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type":'
+                ' "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance'
+                ' of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is'
+                ' the output schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type":'
+                ' "integer"}}, "required": ["return_value"]}\n```\nNow output the results for the following'
+                ' inputs:\n```\n{"self": {"customers": [{"first_name": "John", "last_name": "Smith", "birthday":'
+                ' "05/12/1991", "city": "New York"}, {"first_name": "Jane", "last_name": "Doe", "birthday":'
+                ' "03/03/1988", "city": "London"}, {"first_name": "Carol", "last_name": "Lee", "birthday":'
+                ' "07/01/1995", "city": "Berlin"}]}, "query": "Carol Lee"}\n```\n\nThe output should'
+                ' be:\n```\n{"return_value": 2}\n```'
             ),
             (
-                "Execute the following function that is described via a doc string:\n\n\n        Create mock customers"
-                " with believable data (our customers are world citizens).\n        \n\n# Task\n\nExecute the function"
-                " with the inputs that follow in the next section and finally return the output using the output"
-                " type\nas YAML document in an # Output section. (If the value is a literal, then just write the value."
-                " We parse the text in the\n# Output section using `yaml.safe_load` in Python.)\n\n# Dataclasses"
-                " Schema\n\ntypes:\n  Customer:\n    birthday:\n      type: str\n    city:\n      type: str\n   "
-                " first_name:\n      type: str\n    last_name:\n      type: str\n\n\n# Input Types\n\nnum_customers:"
-                " int\n\n\n# Inputs\n\nnum_customers: 3\n\n\n# Output Type\n\n[Customer]\n\n# Execution Scratch-Pad"
-                ' (Think Step by Step)\n\n\n# Output\n\n---\nresult:\n- birthday: "1965-12-21"\n  city: London\n '
-                ' first_name: John\n  last_name: Doe\n- birthday: "1973-10-19"\n  city: Paris\n  first_name: Jane\n '
-                ' last_name: Smith\n- birthday: "1975-07-04"\n  city: Tokyo\n  first_name: Bob\n  last_name: Jones'
+                "Find the index of the customer that matches the natural language query best.\n\nWe support semantic"
+                ' queries instead of SQL, so we can search for things like\n"the customer that was born in'
+                ' 1990".\n\nArgs:\n    query: Natural language query\n\nReturns:\n    The index of the best matching'
+                " customer in the database.\nThe inputs are formatted as JSON using the following"
+                ' schema:\n```\n{"properties": {"self": {"$ref": "#/definitions/CustomerDatabase"}, "query": {"title":'
+                ' "Query", "type": "string"}}, "required": ["self", "query"], "definitions": {"Customer": {"title":'
+                ' "Customer", "type": "object", "properties": {"first_name": {"title": "First Name", "type": "string"},'
+                ' "last_name": {"title": "Last Name", "type": "string"}, "birthday": {"title": "Birthday", "type":'
+                ' "string"}, "city": {"title": "City", "type": "string"}}, "required": ["first_name", "last_name",'
+                ' "birthday", "city"]}, "CustomerDatabase": {"title": "CustomerDatabase", "type": "object",'
+                ' "properties": {"customers": {"title": "Customers", "type": "array", "items": {"$ref":'
+                ' "#/definitions/Customer"}}}, "required": ["customers"]}}}\n```\n\nThe output should be formatted as a'
+                ' JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties":'
+                ' {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type":'
+                ' "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance'
+                ' of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is'
+                ' the output schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type":'
+                ' "integer"}}, "required": ["return_value"]}\n```\nNow output the results for the following'
+                ' inputs:\n```\n{"self": {"customers": [{"first_name": "John", "last_name": "Smith", "birthday":'
+                ' "05/12/1991", "city": "New York"}, {"first_name": "Jane", "last_name": "Doe", "birthday":'
+                ' "03/03/1988", "city": "London"}, {"first_name": "Carol", "last_name": "Lee", "birthday":'
+                ' "07/01/1995", "city": "Berlin"}]}, "query": "Jane Doe"}\n```\n\nThe output should'
+                ' be:\n```\n{"return_value": 1}\n```'
             ),
             (
-                "Execute the following function that is described via a doc string:\n\nFind the index of the customer"
-                " that matches the natural language query best.\n\n        We support semantic queries instead of SQL,"
-                ' so we can search for things like\n        "the customer that was born in 1990".\n\n        Args:\n '
-                "           query: Natural language query\n\n        Returns:\n            The index of the best"
-                " matching customer in the database.\n        \n\n# Task\n\nExecute the function with the inputs that"
-                " follow in the next section and finally return the output using the output type\nas YAML document in"
-                " an # Output section. (If the value is a literal, then just write the value. We parse the text in"
-                " the\n# Output section using `yaml.safe_load` in Python.)\n\n# Dataclasses Schema\n\ntypes:\n "
-                " Customer:\n    birthday:\n      type: str\n    city:\n      type: str\n    first_name:\n      type:"
-                " str\n    last_name:\n      type: str\n  CustomerDatabase:\n    customers:\n      type: '[Customer]'\n"
-                "  FakeLLM_CustomerDatabase:\n    bases:\n    - CustomerDatabase\n    customers:\n      type:"
-                " '[Customer]'\n\n\n# Input Types\n\nquery: str\nself: FakeLLM_CustomerDatabase\n\n\n# Inputs\n\nquery:"
-                " The customer that lives in Tokyo\nself:\n  customers:\n  - birthday: '1965-12-21'\n    city: London\n"
-                "    first_name: John\n    last_name: Doe\n  - birthday: '1973-10-19'\n    city: Paris\n    first_name:"
-                " Jane\n    last_name: Smith\n  - birthday: '1975-07-04'\n    city: Tokyo\n    first_name: Bob\n   "
-                " last_name: Jones\n\n\n# Output Type\n\nint\n\n# Execution Scratch-Pad (Think Step by Step)\n\n\n#"
-                " Output\n\n---\nresult: 2"
+                "Create mock customers with believable data (our customers are world citizens).\nThe inputs are"
+                ' formatted as JSON using the following schema:\n```\n{"properties": {"num_customers": {"title": "Num'
+                ' Customers", "default": 1, "type": "integer"}}}\n```\n\nThe output should be formatted as a JSON'
+                ' instance that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties":'
+                ' {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type":'
+                ' "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance'
+                ' of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is'
+                ' the output schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type": "array",'
+                ' "items": {"$ref": "#/definitions/Customer"}}}, "required": ["return_value"], "definitions":'
+                ' {"Customer": {"title": "Customer", "type": "object", "properties": {"first_name": {"title": "First'
+                ' Name", "type": "string"}, "last_name": {"title": "Last Name", "type": "string"}, "birthday":'
+                ' {"title": "Birthday", "type": "string"}, "city": {"title": "City", "type": "string"}}, "required":'
+                ' ["first_name", "last_name", "birthday", "city"]}}}\n```\nNow output the results for the following'
+                ' inputs:\n```\n{"num_customers": 3}\n```\n\nOutput:\n{"return_value": [{"first_name": "John",'
+                ' "last_name": "Smith", "birthday": "05/12/1991", "city": "New York"}, {"first_name": "Jane",'
+                ' "last_name": "Doe", "birthday": "03/03/1988", "city": "London"}, {"first_name": "Carol", "last_name":'
+                ' "Lee", "birthday": "07/01/1995", "city": "Berlin"}]}'
             ),
             (
-                "Execute the following function that is described via a doc string:\n\nFind the index of the customer"
-                " that matches the natural language query best.\n\n        We support semantic queries instead of SQL,"
-                ' so we can search for things like\n        "the customer that was born in 1990".\n\n        Args:\n '
-                "           query: Natural language query\n\n        Returns:\n            The index of the best"
-                " matching customer in the database.\n        \n\n# Task\n\nExecute the function with the inputs that"
-                " follow in the next section and finally return the output using the output type\nas YAML document in"
-                " an # Output section. (If the value is a literal, then just write the value. We parse the text in"
-                " the\n# Output section using `yaml.safe_load` in Python.)\n\n# Dataclasses Schema\n\ntypes:\n "
-                " Customer:\n    birthday:\n      type: str\n    city:\n      type: str\n    first_name:\n      type:"
-                " str\n    last_name:\n      type: str\n  CustomerDatabase:\n    customers:\n      type: '[Customer]'\n"
-                "  FakeLLM_CustomerDatabase:\n    bases:\n    - CustomerDatabase\n    customers:\n      type:"
-                " '[Customer]'\n\n\n# Input Types\n\nquery: str\nself: FakeLLM_CustomerDatabase\n\n\n# Inputs\n\nquery:"
-                " The customer that was born in 1965\nself:\n  customers:\n  - birthday: '1965-12-21'\n    city:"
-                " London\n    first_name: John\n    last_name: Doe\n  - birthday: '1973-10-19'\n    city: Paris\n   "
-                " first_name: Jane\n    last_name: Smith\n  - birthday: '1975-07-04'\n    city: Tokyo\n    first_name:"
-                " Bob\n    last_name: Jones\n\n\n# Output Type\n\nint\n\n# Execution Scratch-Pad (Think Step by"
-                " Step)\n\n\n\n# Output\n\n---\nresult: 0"
+                "Find the index of the customer that matches the natural language query best.\n\nWe support semantic"
+                ' queries instead of SQL, so we can search for things like\n"the customer that was born in'
+                ' 1990".\n\nArgs:\n    query: Natural language query\n\nReturns:\n    The index of the best matching'
+                " customer in the database.\nThe inputs are formatted as JSON using the following"
+                ' schema:\n```\n{"properties": {"self": {"$ref": "#/definitions/CustomerDatabase"}, "query": {"title":'
+                ' "Query", "type": "string"}}, "required": ["self", "query"], "definitions": {"Customer": {"title":'
+                ' "Customer", "type": "object", "properties": {"first_name": {"title": "First Name", "type": "string"},'
+                ' "last_name": {"title": "Last Name", "type": "string"}, "birthday": {"title": "Birthday", "type":'
+                ' "string"}, "city": {"title": "City", "type": "string"}}, "required": ["first_name", "last_name",'
+                ' "birthday", "city"]}, "CustomerDatabase": {"title": "CustomerDatabase", "type": "object",'
+                ' "properties": {"customers": {"title": "Customers", "type": "array", "items": {"$ref":'
+                ' "#/definitions/Customer"}}}, "required": ["customers"]}}}\n```\n\nThe output should be formatted as a'
+                ' JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties":'
+                ' {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type":'
+                ' "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance'
+                ' of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is'
+                ' the output schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type":'
+                ' "integer"}}, "required": ["return_value"]}\n```\nNow output the results for the following'
+                ' inputs:\n```\n{"self": {"customers": [{"first_name": "John", "last_name": "Smith", "birthday":'
+                ' "05/12/1991", "city": "New York"}, {"first_name": "Jane", "last_name": "Doe", "birthday":'
+                ' "03/03/1988", "city": "London"}, {"first_name": "Carol", "last_name": "Lee", "birthday":'
+                ' "07/01/1995", "city": "Berlin"}]}, "query": "John Smith"}\n```\n\nThe output should be:'
+                ' \n```\n{"return_value": 0}\n```'
             ),
         }
         # external_llm=OpenAI(),

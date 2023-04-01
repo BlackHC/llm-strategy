@@ -1,7 +1,7 @@
 from typing import Any, Mapping
 
 from langchain.llms.base import LLM, BaseLLM
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class FakeLLM(LLM, BaseModel):
@@ -21,7 +21,7 @@ class FakeLLM(LLM, BaseModel):
     outputs for different calls, for example.)
     """
 
-    texts: set[str] = set()
+    texts: set[str] = Field(default_factory=set)
     """The texts to return on call."""
     external_llm: BaseLLM | None = None
     """An external LLM to use if the query is not found."""
@@ -63,10 +63,13 @@ class FakeLLM(LLM, BaseModel):
             return response
 
         # If no queries are provided, print the code to update the query
-        code_snippet = f"""# Add the following to the queries dict:
-{prompt!r}, # TODO: Append the correct response here
-"""
-        raise NotImplementedError("No query provided. Add the following to the queries dict:\n\n" + code_snippet)
+        code_snippet = (
+            "# Add the following to the queries list:\n\n"
+            + "\n".join(map(repr, prompt.splitlines(True)))
+            + "\n# TODO: Append the correct response here"
+        )
+        print(code_snippet)
+        raise NotImplementedError("No query provided to FakeLLM." + code_snippet)
 
     @property
     def _identifying_params(self) -> Mapping[str, Any]:
