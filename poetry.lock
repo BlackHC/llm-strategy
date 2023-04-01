@@ -431,18 +431,6 @@ files = [
 ]
 
 [[package]]
-name = "docstring-parser"
-version = "0.15"
-description = "Parse Python docstrings in reST, Google and Numpydoc format"
-category = "main"
-optional = false
-python-versions = ">=3.6,<4.0"
-files = [
-    {file = "docstring_parser-0.15-py3-none-any.whl", hash = "sha256:d1679b86250d269d06a99670924d6bce45adc00b08069dae8c47d98e89b667a9"},
-    {file = "docstring_parser-0.15.tar.gz", hash = "sha256:48ddc093e8b1865899956fcc03b03e66bb7240c310fac5af81814580c55bf682"},
-]
-
-[[package]]
 name = "filelock"
 version = "3.10.7"
 description = "A platform independent file lock."
@@ -731,14 +719,14 @@ i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "langchain"
-version = "0.0.127"
+version = "0.0.128"
 description = "Building applications with LLMs through composability"
 category = "main"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "langchain-0.0.127-py3-none-any.whl", hash = "sha256:04ba053881e6098e80e0f4afc8922f3fe78923b160fd12d856aebce49c261918"},
-    {file = "langchain-0.0.127.tar.gz", hash = "sha256:e8a3b67fd86a6f79c4334f0a7588c9476fcb57b27a8fb0e617f47c01eaab8be8"},
+    {file = "langchain-0.0.128-py3-none-any.whl", hash = "sha256:71a843228526a90a62e07c7234e106028f71528dcf0ff42815fb5af79a6326fc"},
+    {file = "langchain-0.0.128.tar.gz", hash = "sha256:efa4804ecb6e11adcb826c5d73e0697aeba9ac92396a6d1a9866dbe500626cb8"},
 ]
 
 [package.dependencies]
@@ -1371,17 +1359,6 @@ python-versions = ">=3.7"
 files = [
     {file = "packaging-23.0-py3-none-any.whl", hash = "sha256:714ac14496c3e68c99c29b00845f7a2b85f3bb6f1078fd9f72fd20f0570002b2"},
     {file = "packaging-23.0.tar.gz", hash = "sha256:b6ad297f8907de0fa2fe1ccbd26fdaf387f5f47c7275fedf8cce89f99446cf97"},
-]
-
-[[package]]
-name = "parse"
-version = "1.19.0"
-description = "parse() is the opposite of format()"
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "parse-1.19.0.tar.gz", hash = "sha256:9ff82852bcb65d139813e2a5197627a94966245c897796760a3a2a8eb66f020b"},
 ]
 
 [[package]]
@@ -2118,4 +2095,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<4.0"
-content-hash = "564f53d36670aa867a2b5aba66a6789050ba9809ee099ce684ea002c9163ca7d"
+content-hash = "f863ae3e58b297fae3951a5a69c9c378cb34925aea1ba5dd406957ea3b327184"
