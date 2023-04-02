@@ -123,8 +123,9 @@ class LLMFunctionSpec:
             # every parameter must be annotated or have a default value
             annotation = parameter.annotation
             if annotation is type:
-                parameter_dict[parameter_name] = (TyperWrapper, ...)
-            elif annotation is inspect.Parameter.empty:
+                annotation = TyperWrapper
+
+            if annotation is inspect.Parameter.empty:
                 # check if the parameter has a default value
                 if parameter.default is inspect.Parameter.empty:
                     raise ValueError(f"The parameter {parameter_name} must be annotated or have a default value.")
@@ -160,9 +161,9 @@ class LLMFunctionSpec:
         )
 
 
-def get_call_schema(input_type: type[BaseModel], output_type: type[BaseModel]):
+def get_call_schema(input_type: type[BaseModel], output_type: type[BaseModel]) -> dict:
     schema = pydantic.schema.schema([input_type, output_type])
-    definitions = deepcopy(schema["definitions"])
+    definitions: dict = deepcopy(schema["definitions"])
     # remove title and type from each sub dict in the definitions
     for value in definitions.values():
         value.pop("title")
@@ -280,7 +281,7 @@ def llm_function(language_model: BaseLLM) -> typing.Callable[[typing.Callable[P,
         elif not callable(f):
             raise ValueError(f"Cannot decorate {f} with llm_strategy.")
 
-        specific_llm_function = functools.wraps(f)(
+        specific_llm_function: LLMFunction = functools.wraps(f)(
             LLMFunction(language_model=language_model, spec=LLMFunctionSpec.from_function(f))
         )
         return specific_llm_function
