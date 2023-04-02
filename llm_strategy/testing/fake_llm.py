@@ -63,7 +63,9 @@ class FakeLLM(LLM, BaseModel):
             return response
 
         # If no queries are provided, print the code to update the query
-        code_snippet = f"# Add the following to the queries list:\n\n{prompt}\n# TODO: Append the correct response here"
+        code_snippet = (
+            f"# Add the following to the queries list:\n\n{repr(prompt)}\n# TODO: Append the correct response here"
+        )
         print(code_snippet)
         raise NotImplementedError("No query provided to FakeLLM." + code_snippet)
 
