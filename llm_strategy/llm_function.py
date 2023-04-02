@@ -162,6 +162,14 @@ class LLMFunctionSpec:
         )
 
 
+def get_simplified_schema(object_type: type[BaseModel]):
+    schema = deepcopy(object_type.schema())
+    # remove title and type
+    schema.pop("title")
+    schema.pop("type")
+    return schema
+
+
 @dataclass
 class LLMFunction(typing.Generic[P, T], typing.Callable[P, T]):  # type: ignore
     """
@@ -186,16 +194,9 @@ class LLMFunction(typing.Generic[P, T], typing.Callable[P, T]):  # type: ignore
         arguments = bound_arguments.arguments
         inputs = self.spec.input_model(**arguments)
 
-        # get the input schema as JSON
-        input_schema = deepcopy(self.spec.input_model.schema())
-        # remove title and type
-        input_schema.pop("title")
-        input_schema.pop("type")
-
-        output_schema = deepcopy(self.spec.output_model.schema())
-        # remove title and type
-        output_schema.pop("title")
-        output_schema.pop("type")
+        # get the input adn output schema as JSON dict
+        input_schema = get_simplified_schema(self.spec.input_model)
+        output_schema = get_simplified_schema(self.spec.output_model)
 
         # create the prompt
         prompt = (
