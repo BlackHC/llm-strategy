@@ -102,12 +102,19 @@ class LLMFunctionSpec:
     input_model: typing.Type[BaseModel]
     output_model: typing.Type[BaseModel]
 
+    def get_call_schema(self) -> dict:
+        schema = pydantic.schema.schema([self.input_model, self.output_model])
+        definitions: dict = deepcopy(schema["definitions"])
+        # remove title and type from each sub dict in the definitions
+        for value in definitions.values():
+            value.pop("title")
+            value.pop("type")
+
+        return definitions
+
     @staticmethod
     def from_function(f: typing.Callable[P, T]) -> "LLMFunctionSpec":
         """Create an LLMFunctionSpec from a function."""
-
-        if not is_not_implemented(f):
-            raise ValueError("The function must not be implemented.")
 
         # get clean docstring of
         docstring = inspect.getdoc(f)
@@ -161,17 +168,6 @@ class LLMFunctionSpec:
         )
 
 
-def get_call_schema(input_type: type[BaseModel], output_type: type[BaseModel]) -> dict:
-    schema = pydantic.schema.schema([input_type, output_type])
-    definitions: dict = deepcopy(schema["definitions"])
-    # remove title and type from each sub dict in the definitions
-    for value in definitions.values():
-        value.pop("title")
-        value.pop("type")
-
-    return definitions
-
-
 @dataclass
 class LLMFunction(typing.Generic[P, T], typing.Callable[P, T]):  # type: ignore
     """
@@ -179,7 +175,6 @@ class LLMFunction(typing.Generic[P, T], typing.Callable[P, T]):  # type: ignore
     """
 
     language_model: BaseLLM
-    spec: LLMFunctionSpec
 
     def __get__(self, instance: object, owner: type | None = None) -> typing.Callable:
         """Support instance methods."""
@@ -190,14 +185,17 @@ class LLMFunction(typing.Generic[P, T], typing.Callable[P, T]):  # type: ignore
         return types.MethodType(self, instance)
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
+        """Call the function."""
+        spec = LLMFunctionSpec.from_function(self)
+
         # bind the inputs to the signature
-        bound_arguments = self.spec.signature.bind(*args, **kwargs)
+        bound_arguments = spec.signature.bind(*args, **kwargs)
         # get the arguments
         arguments = bound_arguments.arguments
-        inputs = self.spec.input_model(**arguments)
+        inputs = spec.input_model(**arguments)
 
         # get the input adn output schema as JSON dict
-        schema = get_call_schema(self.spec.input_model, self.spec.output_model)
+        schema = spec.get_call_schema()
 
         # create the prompt
         prompt = (
@@ -221,7 +219,7 @@ class LLMFunction(typing.Generic[P, T], typing.Callable[P, T]):  # type: ignore
             "```\n"
             "{inputs}\n"
             "```\n"
-        ).format(docstring=self.spec.docstring, schema=json.dumps(schema), inputs=inputs.json())
+        ).format(docstring=spec.docstring, schema=json.dumps(schema), inputs=inputs.json())
 
         # get the chat model
         language_model = self.language_model
@@ -232,7 +230,7 @@ class LLMFunction(typing.Generic[P, T], typing.Callable[P, T]):  # type: ignore
         output = language_model(prompt)
 
         # parse the output
-        parser = PydanticOutputParser(pydantic_object=self.spec.output_model)
+        parser = PydanticOutputParser(pydantic_object=spec.output_model)
         parsed_output = parser.parse(output)
 
         return parsed_output.return_value  # type: ignore
@@ -281,9 +279,10 @@ def llm_function(language_model: BaseLLM) -> typing.Callable[[typing.Callable[P,
         elif not callable(f):
             raise ValueError(f"Cannot decorate {f} with llm_strategy.")
 
-        specific_llm_function: LLMFunction = functools.wraps(f)(
-            LLMFunction(language_model=language_model, spec=LLMFunctionSpec.from_function(f))
-        )
+        if not is_not_implemented(f):
+            raise ValueError("The function must not be implemented.")
+
+        specific_llm_function: LLMFunction = functools.wraps(f)(LLMFunction(language_model=language_model))
         return specific_llm_function
 
     return decorator

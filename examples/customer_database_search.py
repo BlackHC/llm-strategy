@@ -16,6 +16,7 @@ langchain.llm_cache = SQLiteCache()
 base_llm = OpenAI(max_tokens=1024)
 
 
+@llm_strategy(base_llm)
 @dataclass
 class Customer:
     key: str
@@ -32,9 +33,6 @@ class Customer:
         """
 
         raise NotImplementedError()
-
-
-Customer = llm_strategy(base_llm)(Customer)
 
 
 @dataclass
@@ -64,6 +62,7 @@ class CustomerDatabase:
         raise NotImplementedError()
 
 
+@llm_strategy(base_llm)
 @dataclass
 class MockCustomerDatabase(CustomerDatabase):
     def load(self):
@@ -78,9 +77,6 @@ class MockCustomerDatabase(CustomerDatabase):
         Create mock customers with believable data (our customers are world citizens).
         """
         raise NotImplementedError()
-
-
-MockCustomerDatabase = llm_strategy(base_llm)(MockCustomerDatabase)
 
 
 class CustomerDatabaseApp(App):
