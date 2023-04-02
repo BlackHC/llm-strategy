@@ -179,9 +179,6 @@ class LLMFunction(typing.Generic[P, T], typing.Callable[P, T]):  # type: ignore
         # Bind self to instance as MethodType
         return types.MethodType(self, instance)
 
-    def __getattr__(self, name: str) -> typing.Any:
-        return getattr(self.__wrapped__, name)
-
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
         # bind the inputs to the signature
         bound_arguments = self.spec.signature.bind(*args, **kwargs)
@@ -274,10 +271,9 @@ def llm_function(language_model: BaseLLM) -> typing.Callable[[typing.Callable[P,
         elif not callable(f):
             raise ValueError(f"Cannot decorate {f} with llm_strategy.")
 
-        @functools.wraps(f, updated=())
-        class SpecificLLMFunction(LLMFunction):
-            pass
-
-        return SpecificLLMFunction(language_model=language_model, spec=LLMFunctionSpec.from_function(f))
+        specific_llm_function = functools.wraps(f)(
+            LLMFunction(language_model=language_model, spec=LLMFunctionSpec.from_function(f))
+        )
+        return specific_llm_function
 
     return decorator
