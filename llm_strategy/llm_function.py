@@ -123,7 +123,7 @@ class LLMFunctionSpec:
             # every parameter must be annotated or have a default value
             annotation = parameter.annotation
             if annotation is type:
-                annotation = TyperWrapper
+                parameter_dict[parameter_name] = (TyperWrapper, ...)
             elif annotation is inspect.Parameter.empty:
                 # check if the parameter has a default value
                 if parameter.default is inspect.Parameter.empty:

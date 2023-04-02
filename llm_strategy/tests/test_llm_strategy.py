@@ -149,6 +149,18 @@ def test_llm_strategy_dummy_interface():
             ),
             (
                 'Add two numbers.\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties":'
+                ' {"cls": {"title": "Cls", "type": "string"}, "a": {"title": "A", "type": "integer"}, "b": {"title":'
+                ' "B", "type": "integer"}}, "required": ["cls", "a", "b"]}\n```\n\nThe output should be formatted as a'
+                ' JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties":'
+                ' {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type":'
+                ' "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance'
+                ' of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is'
+                ' the output schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type":'
+                ' "integer"}}, "required": ["return_value"]}\n```\nNow output the results for the following'
+                ' inputs:\n```\n{"cls": "FakeLLM_DummyInterface", "a": 1, "b": 2}\n```\n{"return_value": 3}\n'
+            ),
+            (
+                'Add two numbers.\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties":'
                 ' {"self": {"$ref": "#/definitions/DummyInterface"}, "a": {"title": "A", "type": "integer"}, "b":'
                 ' {"title": "B", "type": "integer"}}, "required": ["self", "a", "b"], "definitions": {"DummyInterface":'
                 ' {"title": "DummyInterface", "type": "object", "properties": {"a": {"title": "A", "default": -1,'
@@ -169,9 +181,10 @@ def test_llm_strategy_dummy_interface():
     llm_DummyInstance = llm_DummyInterface()
     assert llm_DummyInstance.property_getter == 0
     assert llm_DummyInterface.static_method(1, 2) == 3
-    assert llm_DummyInterface.static_method(1, 2) == 3
+    assert llm_DummyInstance.static_method(1, 2) == 3
     assert llm_DummyInstance.bound_method(1, 2) == 3
     assert llm_DummyInterface.class_method(1, 2) == 3
+    assert llm_DummyInstance.class_method(1, 2) == 3
 
     assert llm_DummyInterface.static_method_implemented(1, 2) == 3
     assert llm_DummyInstance.bound_method_implemented(1) == 0
