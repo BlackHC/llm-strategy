@@ -20,40 +20,43 @@ def test_llm_function_add_two_ints():
     llm = FakeLLM(
         texts={
             (
-                'Add two integers.\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties":'
-                ' {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}}, "required": ["a",'
-                ' "b"]}\n```\n\nThe output should be formatted as a JSON instance that conforms to the JSON schema'
-                ' below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a'
-                ' list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}}\nthe object'
-                ' {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo":'
-                ' ["bar", "baz"]}} is not well-formatted.\n\nHere is the output schema:\n```\n{"properties":'
-                ' {"return_value": {"title": "Return Value", "type": "integer"}}, "required":'
-                ' ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"a": 1, "b":'
-                ' 2}\n```\n{"return_value": 3}'
+                "Add two integers.\n\nThe input is formatted as a JSON interface of Inputs that conforms to the JSON "
+                "schema below, and the output should be formatted as a JSON instance of Outputs that conforms to the "
+                'JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo", '
+                '"description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ['
+                '"foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {'
+                '"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the schema:\n```\n{'
+                '"Inputs": {"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", '
+                '"type": "integer"}}, "required": ["a", "b"]}, "Outputs": {"properties": {"return_value": {"title": '
+                '"Return Value", "type": "integer"}}, "required": ["return_value"]}}\n```\n\nNow output the results '
+                'for the following inputs:\n```\n{"a": 1, "b": 2}\n```\n'
+                '{"return_value": 3}'
             ),
             (
-                "Add two integers with a default value.\nThe inputs are formatted as JSON using the following"
-                ' schema:\n```\n{"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "default":'
-                ' 1, "type": "integer"}}, "required": ["a"]}\n```\n\nThe output should be formatted as a JSON instance'
-                ' that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo":'
-                ' {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}},'
-                ' "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema.'
-                ' The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the output'
-                ' schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type": "integer"}},'
-                ' "required": ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"a": 1,'
-                ' "b": 1}\n```\n{"return_value": 2}'
+                "Add two integers with a default value.\n\nThe input is formatted as a JSON interface of Inputs that "
+                "conforms to the JSON schema below, and the output should be formatted as a JSON instance of Outputs "
+                'that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {'
+                '"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, '
+                '"required": ["foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. '
+                'The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the '
+                'schema:\n```\n{"Inputs": {"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", '
+                '"default": 1, "type": "integer"}}, "required": ["a"]}, "Outputs": {"properties": {"return_value": {'
+                '"title": "Return Value", "type": "integer"}}, "required": ["return_value"]}}\n```\n\nNow output the '
+                'results for the following inputs:\n```\n{"a": 1, "b": 1}\n```\n'
+                '{"return_value": 2}'
             ),
             (
-                "Add two integers with a default value.\nThe inputs are formatted as JSON using the following"
-                ' schema:\n```\n{"properties": {"a": {"title": "A", "type": "integer"}, "c": {"title": "C", "default":'
-                ' 2, "type": "integer"}}, "required": ["a"]}\n```\n\nThe output should be formatted as a JSON instance'
-                ' that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo":'
-                ' {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}},'
-                ' "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema.'
-                ' The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the output'
-                ' schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type": "integer"}},'
-                ' "required": ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"a": 1,'
-                ' "c": 2}\n```\n{"return_value": 3}'
+                "Add two integers with a default value.\n\nThe input is formatted as a JSON interface of Inputs that "
+                "conforms to the JSON schema below, and the output should be formatted as a JSON instance of Outputs "
+                'that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {'
+                '"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, '
+                '"required": ["foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. '
+                'The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the '
+                'schema:\n```\n{"Inputs": {"properties": {"a": {"title": "A", "type": "integer"}, "c": {"title": "C", '
+                '"default": 2, "type": "integer"}}, "required": ["a"]}, "Outputs": {"properties": {"return_value": {'
+                '"title": "Return Value", "type": "integer"}}, "required": ["return_value"]}}\n```\n\nNow output the '
+                'results for the following inputs:\n```\n{"a": 1, "c": 2}\n```\n'
+                '{"return_value": 3}'
             ),
         },
         # external_llm=OpenAI(),
@@ -78,17 +81,18 @@ class Foo:
 def test_llm_function_property():
     llm = FakeLLM(
         texts={
-            "Add the two integer fields self.a and self.b.\nThe inputs are formatted as JSON using the following"
-            ' schema:\n```\n{"properties": {"self": {"$ref": "#/definitions/Foo"}}, "required": ["self"],'
-            ' "definitions": {"Foo": {"title": "Foo", "type": "object", "properties": {"a": {"title": "A", "type":'
-            ' "integer"}, "b": {"title": "B", "type": "integer"}}, "required": ["a", "b"]}}}\n```\n\nThe output should'
-            " be formatted as a JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema"
-            ' {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items":'
-            ' {"type": "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted'
-            ' instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere'
-            ' is the output schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type":'
-            ' "integer"}}, "required": ["return_value"]}\n```\nNow output the results for the following'
-            ' inputs:\n```\n{"self": {"a": 1, "b": 2}}\n```\n{"return_value": 3}'
+            "Add the two integer fields self.a and self.b.\n\nThe input is formatted as a JSON interface of Inputs "
+            "that conforms to the JSON schema below, and the output should be formatted as a JSON instance of Outputs "
+            'that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {'
+            '"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, '
+            '"required": ["foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The '
+            'object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the schema:\n```\n{'
+            '"Foo": {"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}}, '
+            '"required": ["a", "b"]}, "Inputs": {"properties": {"self": {"$ref": "#/definitions/Foo"}}, "required": ['
+            '"self"]}, "Outputs": {"properties": {"return_value": {"title": "Return Value", "type": "integer"}}, '
+            '"required": ["return_value"]}}\n```\n\nNow output the results for the following inputs:\n```\n{"self": {'
+            '"a": 1, "b": 2}}\n```\n'
+            '{"return_value": 3}'
         },
         # external_llm=OpenAI()
     )

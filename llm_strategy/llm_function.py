@@ -7,10 +7,10 @@ import typing
 from copy import copy, deepcopy
 from dataclasses import dataclass
 
+import pydantic.schema
 import typing_extensions
 from langchain.llms import BaseLLM
 from langchain.output_parsers import PydanticOutputParser
-from langchain.output_parsers.format_instructions import PYDANTIC_FORMAT_INSTRUCTIONS
 from pydantic import BaseModel, create_model
 
 T = typing.TypeVar("T")
@@ -136,10 +136,8 @@ class LLMFunctionSpec:
                     annotation,
                     parameter.default,
                 )
-        # turn the function name into a class name
-        class_name_prefix = f.__name__.capitalize()
         # create the model
-        input_model = create_model(f"{class_name_prefix}Inputs", **parameter_dict)
+        input_model = create_model("Inputs", **parameter_dict)
         input_model.update_forward_refs()
         # get the return type
         return_type = signature.return_annotation
@@ -151,7 +149,7 @@ class LLMFunctionSpec:
             return_info = typing.get_args(return_type)
         else:
             return_info = (return_type, ...)
-        output_model = create_model(f"{class_name_prefix}Output", return_value=return_info)
+        output_model = create_model("Outputs", return_value=return_info)
         output_model.update_forward_refs()
 
         return LLMFunctionSpec(
@@ -162,12 +160,15 @@ class LLMFunctionSpec:
         )
 
 
-def get_simplified_schema(object_type: type[BaseModel]):
-    schema = deepcopy(object_type.schema())
-    # remove title and type
-    schema.pop("title")
-    schema.pop("type")
-    return schema
+def get_call_schema(input_type: type[BaseModel], output_type: type[BaseModel]):
+    schema = pydantic.schema.schema([input_type, output_type])
+    definitions = deepcopy(schema["definitions"])
+    # remove title and type from each sub dict in the definitions
+    for value in definitions.values():
+        value.pop("title")
+        value.pop("type")
+
+    return definitions
 
 
 @dataclass
@@ -195,24 +196,31 @@ class LLMFunction(typing.Generic[P, T], typing.Callable[P, T]):  # type: ignore
         inputs = self.spec.input_model(**arguments)
 
         # get the input adn output schema as JSON dict
-        input_schema = get_simplified_schema(self.spec.input_model)
-        output_schema = get_simplified_schema(self.spec.output_model)
+        schema = get_call_schema(self.spec.input_model, self.spec.output_model)
 
         # create the prompt
         prompt = (
-            f"{self.spec.docstring}\n"
-            "The inputs are formatted as JSON using the following schema:\n"
-            "```\n"
-            f"{json.dumps(input_schema)}\n"
-            "```\n"
+            "{docstring}\n"
             "\n"
-            f"{PYDANTIC_FORMAT_INSTRUCTIONS.format(schema=json.dumps(output_schema))}"
+            "The input is formatted as a JSON interface of Inputs that conforms to the JSON schema below, "
+            "and the output should be formatted as a JSON instance of Outputs that conforms to the JSON "
+            "schema below.\n"
+            "\n"
+            'As an example, for the schema {{"properties": {{"foo": {{"title": "Foo", "description": "a list of '
+            'strings", "type": "array", "items": {{"type": "string"}}}}}}, "required": ["foo"]}}}} the object {{'
+            '"foo": ["bar", "baz"]}} is a well-formatted instance of the schema. The object {{"properties": {{"foo": '
+            '["bar", "baz"]}}}} is not well-formatted.\n'
+            "\n"
+            "Here is the schema:\n"
+            "```\n"
+            "{schema}\n"
+            "```\n"
             "\n"
             "Now output the results for the following inputs:\n"
             "```\n"
-            f"{inputs.json()}\n"
+            "{inputs}\n"
             "```\n"
-        )
+        ).format(docstring=self.spec.docstring, schema=json.dumps(schema), inputs=inputs.json())
 
         # get the chat model
         language_model = self.language_model

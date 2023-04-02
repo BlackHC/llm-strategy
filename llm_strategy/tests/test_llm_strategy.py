@@ -75,40 +75,43 @@ def test_llm_strategy_on_functions():
     llm = FakeLLM(
         texts={
             (
-                'Add two integers.\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties":'
-                ' {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}}, "required": ["a",'
-                ' "b"]}\n```\n\nThe output should be formatted as a JSON instance that conforms to the JSON schema'
-                ' below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a'
-                ' list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}}\nthe object'
-                ' {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo":'
-                ' ["bar", "baz"]}} is not well-formatted.\n\nHere is the output schema:\n```\n{"properties":'
-                ' {"return_value": {"title": "Return Value", "type": "integer"}}, "required":'
-                ' ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"a": 1, "b":'
-                ' 2}\n```\n{"return_value": 3}\n'
+                "Add two integers.\n\nThe input is formatted as a JSON interface of Inputs that conforms to the JSON "
+                "schema below, and the output should be formatted as a JSON instance of Outputs that conforms to the "
+                'JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo", '
+                '"description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ['
+                '"foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {'
+                '"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the schema:\n```\n{'
+                '"Inputs": {"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", '
+                '"type": "integer"}}, "required": ["a", "b"]}, "Outputs": {"properties": {"return_value": {"title": '
+                '"Return Value", "type": "integer"}}, "required": ["return_value"]}}\n```\n\nNow output the results '
+                'for the following inputs:\n```\n{"a": 1, "b": 2}\n```\n'
+                '{"return_value": 3}\n'
             ),
             (
-                "Add two integers with a default value.\nThe inputs are formatted as JSON using the following"
-                ' schema:\n```\n{"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "default":'
-                ' 1, "type": "integer"}}, "required": ["a"]}\n```\n\nThe output should be formatted as a JSON instance'
-                ' that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo":'
-                ' {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}},'
-                ' "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema.'
-                ' The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the output'
-                ' schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type": "integer"}},'
-                ' "required": ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"a": 1,'
-                ' "b": 1}\n```\n{"return_value": 2}\n'
+                "Add two integers with a default value.\n\nThe input is formatted as a JSON interface of Inputs that "
+                "conforms to the JSON schema below, and the output should be formatted as a JSON instance of Outputs "
+                'that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {'
+                '"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, '
+                '"required": ["foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. '
+                'The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the '
+                'schema:\n```\n{"Inputs": {"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", '
+                '"default": 1, "type": "integer"}}, "required": ["a"]}, "Outputs": {"properties": {"return_value": {'
+                '"title": "Return Value", "type": "integer"}}, "required": ["return_value"]}}\n```\n\nNow output the '
+                'results for the following inputs:\n```\n{"a": 1, "b": 1}\n```\n'
+                '{"return_value": 2}\n'
             ),
             (
-                "Add two integers with a default value.\nThe inputs are formatted as JSON using the following"
-                ' schema:\n```\n{"properties": {"a": {"title": "A", "type": "integer"}, "c": {"title": "C", "default":'
-                ' 2, "type": "integer"}}, "required": ["a"]}\n```\n\nThe output should be formatted as a JSON instance'
-                ' that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo":'
-                ' {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}},'
-                ' "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema.'
-                ' The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the output'
-                ' schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type": "integer"}},'
-                ' "required": ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"a": 1,'
-                ' "c": 2}\n```\n{"return_value": 3}\n'
+                "Add two integers with a default value.\n\nThe input is formatted as a JSON interface of Inputs that "
+                "conforms to the JSON schema below, and the output should be formatted as a JSON instance of Outputs "
+                'that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {'
+                '"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, '
+                '"required": ["foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. '
+                'The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the '
+                'schema:\n```\n{"Inputs": {"properties": {"a": {"title": "A", "type": "integer"}, "c": {"title": "C", '
+                '"default": 2, "type": "integer"}}, "required": ["a"]}, "Outputs": {"properties": {"return_value": {'
+                '"title": "Return Value", "type": "integer"}}, "required": ["return_value"]}}\n```\n\nNow output the '
+                'results for the following inputs:\n```\n{"a": 1, "c": 2}\n```\n'
+                '{"return_value": 3}\n'
             ),
         },
         # external_llm=OpenAI(),
@@ -121,59 +124,64 @@ def test_llm_strategy_on_functions():
 
 def test_llm_strategy_dummy_interface():
     llm = FakeLLM(
-        texts={
+        texts=[
             (
-                'Return 0.\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties": {"self":'
-                ' {"$ref": "#/definitions/DummyInterface"}}, "required": ["self"], "definitions": {"DummyInterface":'
-                ' {"title": "DummyInterface", "type": "object", "properties": {"a": {"title": "A", "default": -1,'
-                ' "type": "integer"}}}}}\n```\n\nThe output should be formatted as a JSON instance that conforms to the'
-                ' JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo",'
-                ' "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required":'
-                ' ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object'
-                ' {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the output'
-                ' schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type": "integer"}},'
-                ' "required": ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"self":'
-                ' {"a": -1}}\n```\n{"return_value": 0}\n'
+                "Return 0.\n\nThe input is formatted as a JSON interface of Inputs that conforms to the JSON schema "
+                "below, and the output should be formatted as a JSON instance of Outputs that conforms to the JSON "
+                'schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo", '
+                '"description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ['
+                '"foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {'
+                '"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the schema:\n```\n{'
+                '"DummyInterface": {"properties": {"a": {"title": "A", "default": -1, "type": "integer"}}}, '
+                '"Inputs": {"properties": {"self": {"$ref": "#/definitions/DummyInterface"}}, "required": ["self"]}, '
+                '"Outputs": {"properties": {"return_value": {"title": "Return Value", "type": "integer"}}, '
+                '"required": ["return_value"]}}\n```\n\nNow output the results for the following inputs:\n```\n{'
+                '"self": {"a": -1}}\n```\n'
+                '{"return_value": 0}\n'
             ),
             (
-                'Add two numbers.\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties":'
-                ' {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}}, "required": ["a",'
-                ' "b"]}\n```\n\nThe output should be formatted as a JSON instance that conforms to the JSON schema'
-                ' below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a'
-                ' list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}}\nthe object'
-                ' {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo":'
-                ' ["bar", "baz"]}} is not well-formatted.\n\nHere is the output schema:\n```\n{"properties":'
-                ' {"return_value": {"title": "Return Value", "type": "integer"}}, "required":'
-                ' ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"a": 1, "b":'
-                ' 2}\n```\n{"return_value": 3}\n'
+                "Add two numbers.\n\nThe input is formatted as a JSON interface of Inputs that conforms to the JSON "
+                "schema below, and the output should be formatted as a JSON instance of Outputs that conforms to the "
+                'JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo", '
+                '"description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ['
+                '"foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {'
+                '"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the schema:\n```\n{'
+                '"Inputs": {"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", '
+                '"type": "integer"}}, "required": ["a", "b"]}, "Outputs": {"properties": {"return_value": {"title": '
+                '"Return Value", "type": "integer"}}, "required": ["return_value"]}}\n```\n\nNow output the results '
+                'for the following inputs:\n```\n{"a": 1, "b": 2}\n```\n'
+                '{"return_value": 3}\n'
             ),
             (
-                'Add two numbers.\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties":'
-                ' {"cls": {"title": "Cls", "type": "string"}, "a": {"title": "A", "type": "integer"}, "b": {"title":'
-                ' "B", "type": "integer"}}, "required": ["cls", "a", "b"]}\n```\n\nThe output should be formatted as a'
-                ' JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties":'
-                ' {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type":'
-                ' "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance'
-                ' of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is'
-                ' the output schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type":'
-                ' "integer"}}, "required": ["return_value"]}\n```\nNow output the results for the following'
-                ' inputs:\n```\n{"cls": "FakeLLM_DummyInterface", "a": 1, "b": 2}\n```\n{"return_value": 3}\n'
+                "Add two numbers.\n\nThe input is formatted as a JSON interface of Inputs that conforms to the JSON "
+                "schema below, and the output should be formatted as a JSON instance of Outputs that conforms to the "
+                'JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo", '
+                '"description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ['
+                '"foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {'
+                '"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the schema:\n```\n{'
+                '"DummyInterface": {"properties": {"a": {"title": "A", "default": -1, "type": "integer"}}}, '
+                '"Inputs": {"properties": {"self": {"$ref": "#/definitions/DummyInterface"}, "a": {"title": "A", '
+                '"type": "integer"}, "b": {"title": "B", "type": "integer"}}, "required": ["self", "a", "b"]}, '
+                '"Outputs": {"properties": {"return_value": {"title": "Return Value", "type": "integer"}}, '
+                '"required": ["return_value"]}}\n```\n\nNow output the results for the following inputs:\n```\n{'
+                '"self": {"a": -1}, "a": 1, "b": 2}\n```\n '
+                '{"return_value": 3}\n'
             ),
             (
-                'Add two numbers.\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties":'
-                ' {"self": {"$ref": "#/definitions/DummyInterface"}, "a": {"title": "A", "type": "integer"}, "b":'
-                ' {"title": "B", "type": "integer"}}, "required": ["self", "a", "b"], "definitions": {"DummyInterface":'
-                ' {"title": "DummyInterface", "type": "object", "properties": {"a": {"title": "A", "default": -1,'
-                ' "type": "integer"}}}}}\n```\n\nThe output should be formatted as a JSON instance that conforms to the'
-                ' JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo",'
-                ' "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required":'
-                ' ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object'
-                ' {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the output'
-                ' schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type": "integer"}},'
-                ' "required": ["return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"self":'
-                ' {"a": -1}, "a": 1, "b": 2}\n```\n{"return_value": 3}\n'
+                "Add two numbers.\n\nThe input is formatted as a JSON interface of Inputs that conforms to the JSON "
+                "schema below, and the output should be formatted as a JSON instance of Outputs that conforms to the "
+                'JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo", '
+                '"description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ['
+                '"foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {'
+                '"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the schema:\n```\n{'
+                '"Inputs": {"properties": {"cls": {"title": "Cls", "type": "string"}, "a": {"title": "A", '
+                '"type": "integer"}, "b": {"title": "B", "type": "integer"}}, "required": ["cls", "a", "b"]}, '
+                '"Outputs": {"properties": {"return_value": {"title": "Return Value", "type": "integer"}}, '
+                '"required": ["return_value"]}}\n```\n\nNow output the results for the following inputs:\n```\n{'
+                '"cls": "FakeLLM_DummyInterface", "a": 1, "b": 2}\n```\n '
+                '{"return_value": 3}\n'
             ),
-        }
+        ]
         # external_llm=OpenAI(),
     )
 
@@ -240,123 +248,122 @@ def test_llm_strategy():
     llm = FakeLLM(
         texts={
             (
-                "Create mock queries that match one of the mock customers better than the others.\n\nWe support"
-                ' semantic queries instead of SQL, so we can search for things like\n"the customer that was born in'
-                ' 1990".\nThe inputs are formatted as JSON using the following schema:\n```\n{"properties":'
-                ' {"customer_database": {"$ref": "#/definitions/CustomerDatabase"}, "num_queries": {"title": "Num'
-                ' Queries", "default": 1, "type": "integer"}}, "required": ["customer_database"], "definitions":'
-                ' {"Customer": {"title": "Customer", "type": "object", "properties": {"first_name": {"title": "First'
-                ' Name", "type": "string"}, "last_name": {"title": "Last Name", "type": "string"}, "birthday":'
-                ' {"title": "Birthday", "type": "string"}, "city": {"title": "City", "type": "string"}}, "required":'
-                ' ["first_name", "last_name", "birthday", "city"]}, "CustomerDatabase": {"title": "CustomerDatabase",'
-                ' "type": "object", "properties": {"customers": {"title": "Customers", "type": "array", "items":'
-                ' {"$ref": "#/definitions/Customer"}}}, "required": ["customers"]}}}\n```\n\nThe output should be'
-                " formatted as a JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema"
-                ' {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items":'
-                ' {"type": "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted'
-                ' instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not'
-                ' well-formatted.\n\nHere is the output schema:\n```\n{"properties": {"return_value": {"title": "Return'
-                ' Value", "type": "array", "items": {"type": "string"}}}, "required": ["return_value"]}\n```\nNow'
-                ' output the results for the following inputs:\n```\n{"customer_database": {"customers":'
-                ' [{"first_name": "John", "last_name": "Smith", "birthday": "05/12/1991", "city": "New York"},'
-                ' {"first_name": "Jane", "last_name": "Doe", "birthday": "03/03/1988", "city": "London"},'
-                ' {"first_name": "Carol", "last_name": "Lee", "birthday": "07/01/1995", "city": "Berlin"}]},'
-                ' "num_queries": 3}\n```\n\nThe output should be:\n\n{"return_value": ["John Smith", "Jane Doe", "Carol'
-                ' Lee"]}'
-            ),
-            (
-                "Find the index of the customer that matches the natural language query best.\n\nWe support semantic"
-                ' queries instead of SQL, so we can search for things like\n"the customer that was born in'
-                ' 1990".\n\nArgs:\n    query: Natural language query\n\nReturns:\n    The index of the best matching'
-                " customer in the database.\nThe inputs are formatted as JSON using the following"
-                ' schema:\n```\n{"properties": {"self": {"$ref": "#/definitions/CustomerDatabase"}, "query": {"title":'
-                ' "Query", "type": "string"}}, "required": ["self", "query"], "definitions": {"Customer": {"title":'
-                ' "Customer", "type": "object", "properties": {"first_name": {"title": "First Name", "type": "string"},'
-                ' "last_name": {"title": "Last Name", "type": "string"}, "birthday": {"title": "Birthday", "type":'
-                ' "string"}, "city": {"title": "City", "type": "string"}}, "required": ["first_name", "last_name",'
-                ' "birthday", "city"]}, "CustomerDatabase": {"title": "CustomerDatabase", "type": "object",'
-                ' "properties": {"customers": {"title": "Customers", "type": "array", "items": {"$ref":'
-                ' "#/definitions/Customer"}}}, "required": ["customers"]}}}\n```\n\nThe output should be formatted as a'
-                ' JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties":'
-                ' {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type":'
-                ' "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance'
-                ' of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is'
-                ' the output schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type":'
-                ' "integer"}}, "required": ["return_value"]}\n```\nNow output the results for the following'
-                ' inputs:\n```\n{"self": {"customers": [{"first_name": "John", "last_name": "Smith", "birthday":'
-                ' "05/12/1991", "city": "New York"}, {"first_name": "Jane", "last_name": "Doe", "birthday":'
-                ' "03/03/1988", "city": "London"}, {"first_name": "Carol", "last_name": "Lee", "birthday":'
-                ' "07/01/1995", "city": "Berlin"}]}, "query": "Carol Lee"}\n```\n\nThe output should'
-                ' be:\n```\n{"return_value": 2}\n```'
-            ),
-            (
-                "Find the index of the customer that matches the natural language query best.\n\nWe support semantic"
-                ' queries instead of SQL, so we can search for things like\n"the customer that was born in'
-                ' 1990".\n\nArgs:\n    query: Natural language query\n\nReturns:\n    The index of the best matching'
-                " customer in the database.\nThe inputs are formatted as JSON using the following"
-                ' schema:\n```\n{"properties": {"self": {"$ref": "#/definitions/CustomerDatabase"}, "query": {"title":'
-                ' "Query", "type": "string"}}, "required": ["self", "query"], "definitions": {"Customer": {"title":'
-                ' "Customer", "type": "object", "properties": {"first_name": {"title": "First Name", "type": "string"},'
-                ' "last_name": {"title": "Last Name", "type": "string"}, "birthday": {"title": "Birthday", "type":'
-                ' "string"}, "city": {"title": "City", "type": "string"}}, "required": ["first_name", "last_name",'
-                ' "birthday", "city"]}, "CustomerDatabase": {"title": "CustomerDatabase", "type": "object",'
-                ' "properties": {"customers": {"title": "Customers", "type": "array", "items": {"$ref":'
-                ' "#/definitions/Customer"}}}, "required": ["customers"]}}}\n```\n\nThe output should be formatted as a'
-                ' JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties":'
-                ' {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type":'
-                ' "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance'
-                ' of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is'
-                ' the output schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type":'
-                ' "integer"}}, "required": ["return_value"]}\n```\nNow output the results for the following'
-                ' inputs:\n```\n{"self": {"customers": [{"first_name": "John", "last_name": "Smith", "birthday":'
-                ' "05/12/1991", "city": "New York"}, {"first_name": "Jane", "last_name": "Doe", "birthday":'
-                ' "03/03/1988", "city": "London"}, {"first_name": "Carol", "last_name": "Lee", "birthday":'
-                ' "07/01/1995", "city": "Berlin"}]}, "query": "Jane Doe"}\n```\n\nThe output should'
-                ' be:\n```\n{"return_value": 1}\n```'
-            ),
-            (
-                "Create mock customers with believable data (our customers are world citizens).\nThe inputs are"
-                ' formatted as JSON using the following schema:\n```\n{"properties": {"num_customers": {"title": "Num'
-                ' Customers", "default": 1, "type": "integer"}}}\n```\n\nThe output should be formatted as a JSON'
-                ' instance that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties":'
-                ' {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type":'
-                ' "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance'
-                ' of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is'
-                ' the output schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type": "array",'
-                ' "items": {"$ref": "#/definitions/Customer"}}}, "required": ["return_value"], "definitions":'
-                ' {"Customer": {"title": "Customer", "type": "object", "properties": {"first_name": {"title": "First'
-                ' Name", "type": "string"}, "last_name": {"title": "Last Name", "type": "string"}, "birthday":'
-                ' {"title": "Birthday", "type": "string"}, "city": {"title": "City", "type": "string"}}, "required":'
-                ' ["first_name", "last_name", "birthday", "city"]}}}\n```\nNow output the results for the following'
-                ' inputs:\n```\n{"num_customers": 3}\n```\n\nOutput:\n{"return_value": [{"first_name": "John",'
+                "Create mock customers with believable data (our customers are world citizens).\n\nThe input is"
+                " formatted as a JSON interface of Inputs that conforms to the JSON schema below, and the output should"
+                " be formatted as a JSON instance of Outputs that conforms to the JSON schema below.\n\nAs an example,"
+                ' for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type":'
+                ' "array", "items": {"type": "string"}}}, "required": ["foo"]}} the object {"foo": ["bar", "baz"]} is a'
+                ' well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not'
+                ' well-formatted.\n\nHere is the schema:\n```\n{"Inputs": {"properties": {"num_customers": {"title":'
+                ' "Num Customers", "default": 1, "type": "integer"}}}, "Customer": {"properties": {"first_name":'
+                ' {"title": "First Name", "type": "string"}, "last_name": {"title": "Last Name", "type": "string"},'
+                ' "birthday": {"title": "Birthday", "type": "string"}, "city": {"title": "City", "type": "string"}},'
+                ' "required": ["first_name", "last_name", "birthday", "city"]}, "Outputs": {"properties":'
+                ' {"return_value": {"title": "Return Value", "type": "array", "items": {"$ref":'
+                ' "#/definitions/Customer"}}}, "required": ["return_value"]}}\n```\n\nNow output the results for the'
+                ' following inputs:\n```\n{"num_customers": 3}\n```\n{"return_value": [{"first_name": "John",'
                 ' "last_name": "Smith", "birthday": "05/12/1991", "city": "New York"}, {"first_name": "Jane",'
                 ' "last_name": "Doe", "birthday": "03/03/1988", "city": "London"}, {"first_name": "Carol", "last_name":'
-                ' "Lee", "birthday": "07/01/1995", "city": "Berlin"}]}'
+                ' "Lee", "birthday": "07/01/1995", "city": "Berlin"}]}\n'
             ),
             (
-                "Find the index of the customer that matches the natural language query best.\n\nWe support semantic"
-                ' queries instead of SQL, so we can search for things like\n"the customer that was born in'
-                ' 1990".\n\nArgs:\n    query: Natural language query\n\nReturns:\n    The index of the best matching'
-                " customer in the database.\nThe inputs are formatted as JSON using the following"
-                ' schema:\n```\n{"properties": {"self": {"$ref": "#/definitions/CustomerDatabase"}, "query": {"title":'
-                ' "Query", "type": "string"}}, "required": ["self", "query"], "definitions": {"Customer": {"title":'
-                ' "Customer", "type": "object", "properties": {"first_name": {"title": "First Name", "type": "string"},'
-                ' "last_name": {"title": "Last Name", "type": "string"}, "birthday": {"title": "Birthday", "type":'
-                ' "string"}, "city": {"title": "City", "type": "string"}}, "required": ["first_name", "last_name",'
-                ' "birthday", "city"]}, "CustomerDatabase": {"title": "CustomerDatabase", "type": "object",'
-                ' "properties": {"customers": {"title": "Customers", "type": "array", "items": {"$ref":'
-                ' "#/definitions/Customer"}}}, "required": ["customers"]}}}\n```\n\nThe output should be formatted as a'
-                ' JSON instance that conforms to the JSON schema below.\n\nAs an example, for the schema {"properties":'
-                ' {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type":'
-                ' "string"}}}, "required": ["foo"]}}\nthe object {"foo": ["bar", "baz"]} is a well-formatted instance'
-                ' of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is'
-                ' the output schema:\n```\n{"properties": {"return_value": {"title": "Return Value", "type":'
-                ' "integer"}}, "required": ["return_value"]}\n```\nNow output the results for the following'
-                ' inputs:\n```\n{"self": {"customers": [{"first_name": "John", "last_name": "Smith", "birthday":'
-                ' "05/12/1991", "city": "New York"}, {"first_name": "Jane", "last_name": "Doe", "birthday":'
+                "Create mock queries that match one of the mock customers better than the others.\n\nWe support"
+                ' semantic queries instead of SQL, so we can search for things like\n"the customer that was born in'
+                ' 1990".\n\nThe input is formatted as a JSON interface of Inputs that conforms to the JSON schema'
+                " below, and the output should be formatted as a JSON instance of Outputs that conforms to the JSON"
+                ' schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": "Foo", "description":'
+                ' "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}} the object'
+                ' {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo":'
+                ' ["bar", "baz"]}} is not well-formatted.\n\nHere is the schema:\n```\n{"Customer": {"properties":'
+                ' {"first_name": {"title": "First Name", "type": "string"}, "last_name": {"title": "Last Name", "type":'
+                ' "string"}, "birthday": {"title": "Birthday", "type": "string"}, "city": {"title": "City", "type":'
+                ' "string"}}, "required": ["first_name", "last_name", "birthday", "city"]}, "CustomerDatabase":'
+                ' {"properties": {"customers": {"title": "Customers", "type": "array", "items": {"$ref":'
+                ' "#/definitions/Customer"}}}, "required": ["customers"]}, "Inputs": {"properties":'
+                ' {"customer_database": {"$ref": "#/definitions/CustomerDatabase"}, "num_queries": {"title": "Num'
+                ' Queries", "default": 1, "type": "integer"}}, "required": ["customer_database"]}, "Outputs":'
+                ' {"properties": {"return_value": {"title": "Return Value", "type": "array", "items": {"type":'
+                ' "string"}}}, "required": ["return_value"]}}\n```\n\nNow output the results for the following'
+                ' inputs:\n```\n{"customer_database": {"customers": [{"first_name": "John", "last_name": "Smith",'
+                ' "birthday": "05/12/1991", "city": "New York"}, {"first_name": "Jane", "last_name": "Doe", "birthday":'
                 ' "03/03/1988", "city": "London"}, {"first_name": "Carol", "last_name": "Lee", "birthday":'
-                ' "07/01/1995", "city": "Berlin"}]}, "query": "John Smith"}\n```\n\nThe output should be:'
-                ' \n```\n{"return_value": 0}\n```'
+                ' "07/01/1995", "city": "Berlin"}]}, "num_queries": 3}\n```\n{"return_value": ["the customer that was'
+                ' born in 1991", "the customer that was born in 1988", "the customer that was born in 1995"]}\n'
+            ),
+            (
+                "Find the index of the customer that matches the natural language query best.\n\nWe support semantic "
+                'queries instead of SQL, so we can search for things like\n"the customer that was born in '
+                '1990".\n\nArgs:\n    query: Natural language query\n\nReturns:\n    The index of the best matching '
+                "customer in the database.\n\nThe input is formatted as a JSON interface of Inputs that conforms to "
+                "the JSON schema below, and the output should be formatted as a JSON instance of Outputs that "
+                'conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": '
+                '"Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, '
+                '"required": ["foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. '
+                'The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the '
+                'schema:\n```\n{"Customer": {"properties": {"first_name": {"title": "First Name", "type": "string"}, '
+                '"last_name": {"title": "Last Name", "type": "string"}, "birthday": {"title": "Birthday", '
+                '"type": "string"}, "city": {"title": "City", "type": "string"}}, "required": ["first_name", '
+                '"last_name", "birthday", "city"]}, "CustomerDatabase": {"properties": {"customers": {"title": '
+                '"Customers", "type": "array", "items": {"$ref": "#/definitions/Customer"}}}, "required": ['
+                '"customers"]}, "Inputs": {"properties": {"self": {"$ref": "#/definitions/CustomerDatabase"}, '
+                '"query": {"title": "Query", "type": "string"}}, "required": ["self", "query"]}, "Outputs": {'
+                '"properties": {"return_value": {"title": "Return Value", "type": "integer"}}, "required": ['
+                '"return_value"]}}\n```\n\nNow output the results for the following inputs:\n```\n{"self": {'
+                '"customers": [{"first_name": "John", "last_name": "Smith", "birthday": "05/12/1991", "city": "New '
+                'York"}, {"first_name": "Jane", "last_name": "Doe", "birthday": "03/03/1988", "city": "London"}, '
+                '{"first_name": "Carol", "last_name": "Lee", "birthday": "07/01/1995", "city": "Berlin"}]}, '
+                '"query": "the customer that was born in 1991"}\n```\n'
+                '{"return_value": 0}\n'
+            ),
+            (
+                "Find the index of the customer that matches the natural language query best.\n\nWe support semantic "
+                'queries instead of SQL, so we can search for things like\n"the customer that was born in '
+                '1990".\n\nArgs:\n    query: Natural language query\n\nReturns:\n    The index of the best matching '
+                "customer in the database.\n\nThe input is formatted as a JSON interface of Inputs that conforms to "
+                "the JSON schema below, and the output should be formatted as a JSON instance of Outputs that "
+                'conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": '
+                '"Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, '
+                '"required": ["foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. '
+                'The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the '
+                'schema:\n```\n{"Customer": {"properties": {"first_name": {"title": "First Name", "type": "string"}, '
+                '"last_name": {"title": "Last Name", "type": "string"}, "birthday": {"title": "Birthday", '
+                '"type": "string"}, "city": {"title": "City", "type": "string"}}, "required": ["first_name", '
+                '"last_name", "birthday", "city"]}, "CustomerDatabase": {"properties": {"customers": {"title": '
+                '"Customers", "type": "array", "items": {"$ref": "#/definitions/Customer"}}}, "required": ['
+                '"customers"]}, "Inputs": {"properties": {"self": {"$ref": "#/definitions/CustomerDatabase"}, '
+                '"query": {"title": "Query", "type": "string"}}, "required": ["self", "query"]}, "Outputs": {'
+                '"properties": {"return_value": {"title": "Return Value", "type": "integer"}}, "required": ['
+                '"return_value"]}}\n```\n\nNow output the results for the following inputs:\n```\n{"self": {'
+                '"customers": [{"first_name": "John", "last_name": "Smith", "birthday": "05/12/1991", "city": "New '
+                'York"}, {"first_name": "Jane", "last_name": "Doe", "birthday": "03/03/1988", "city": "London"}, '
+                '{"first_name": "Carol", "last_name": "Lee", "birthday": "07/01/1995", "city": "Berlin"}]}, '
+                '"query": "the customer that was born in 1988"}\n```\n'
+                '{"return_value": 1}\n'
+            ),
+            (
+                "Find the index of the customer that matches the natural language query best.\n\nWe support semantic "
+                'queries instead of SQL, so we can search for things like\n"the customer that was born in '
+                '1990".\n\nArgs:\n    query: Natural language query\n\nReturns:\n    The index of the best matching '
+                "customer in the database.\n\nThe input is formatted as a JSON interface of Inputs that conforms to "
+                "the JSON schema below, and the output should be formatted as a JSON instance of Outputs that "
+                'conforms to the JSON schema below.\n\nAs an example, for the schema {"properties": {"foo": {"title": '
+                '"Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, '
+                '"required": ["foo"]}} the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. '
+                'The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.\n\nHere is the '
+                'schema:\n```\n{"Customer": {"properties": {"first_name": {"title": "First Name", "type": "string"}, '
+                '"last_name": {"title": "Last Name", "type": "string"}, "birthday": {"title": "Birthday", '
+                '"type": "string"}, "city": {"title": "City", "type": "string"}}, "required": ["first_name", '
+                '"last_name", "birthday", "city"]}, "CustomerDatabase": {"properties": {"customers": {"title": '
+                '"Customers", "type": "array", "items": {"$ref": "#/definitions/Customer"}}}, "required": ['
+                '"customers"]}, "Inputs": {"properties": {"self": {"$ref": "#/definitions/CustomerDatabase"}, '
+                '"query": {"title": "Query", "type": "string"}}, "required": ["self", "query"]}, "Outputs": {'
+                '"properties": {"return_value": {"title": "Return Value", "type": "integer"}}, "required": ['
+                '"return_value"]}}\n```\n\nNow output the results for the following inputs:\n```\n{"self": {'
+                '"customers": [{"first_name": "John", "last_name": "Smith", "birthday": "05/12/1991", "city": "New '
+                'York"}, {"first_name": "Jane", "last_name": "Doe", "birthday": "03/03/1988", "city": "London"}, '
+                '{"first_name": "Carol", "last_name": "Lee", "birthday": "07/01/1995", "city": "Berlin"}]}, '
+                '"query": "the customer that was born in 1995"}\n```\n'
+                '{"return_value": 2}\n'
             ),
         }
         # external_llm=OpenAI(),
