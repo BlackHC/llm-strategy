@@ -788,12 +788,25 @@ def apply_decorator(f: F_types, decorator) -> F_types:
     This is useful when we want to apply a decorator to a function that is a classmethod, staticmethod, property,
     or a method of a class.
 
-    Args:
-        f: The function to decorate.
-        decorator: The decorator to apply.
+    Parameters
+    ----------
 
-    Returns:
+    f: F_types
+        The function to decorate.
+    decorator: Callable
+        The decorator to apply.
+
+    Returns
+    -------
+
+    F_types
         The decorated function.
+
+    Raises
+    ------
+
+    ValueError
+        If the function is a classmethod, staticmethod, property, or a method of a class.
     """
     specific_llm_function: object
     if isinstance(f, classmethod):
