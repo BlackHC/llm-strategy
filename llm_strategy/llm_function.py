@@ -217,7 +217,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
             resolved_tuple = tuple(
                 resolved_generic_type_map[generic_type] for generic_type in base_generic_type.__parameters__
             )
-            source_type = base_generic_type[resolved_tuple]  # type: ignore
+            source_type = base_generic_type[resolved_tuple]
         else:
             # we let Pydantic handle the rest
             source_type = replace_types(source_type, generic_type_map)
@@ -334,7 +334,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
         # print(f"Input: {self.input.json(indent=1)}")
         # print(f"Output: {json.dumps(json.loads(parsed_output.json())['return_value'], indent=1)}")
 
-        return parsed_output.return_value  # type: ignore
+        return parsed_output.return_value
 
     def query(self, language_model_or_chat_chain, schema):  # noqa: C901
         # create the prompt
@@ -488,7 +488,7 @@ class LLMBoundSignature:
         signature = inspect.signature(f, eval_str=True)
 
         # get all parameters
-        parameters_items: list[tuple[str, inspect.Parameter]] = list(signature.parameters.items())  # type: ignore
+        parameters_items: list[tuple[str, inspect.Parameter]] = list(signature.parameters.items())
         # check that there is at least one parameter
         if not parameters_items:
             raise ValueError("The function must have at least one parameter.")
@@ -528,10 +528,10 @@ class LLMBoundSignature:
 
         model_spec = LLMBoundSignature.field_tuples_to_model_spec(parameter_dict)
         if generic_parameters:
-            bases = (pydantic.generics.GenericModel, typing.Generic[*generic_parameters])  # type: ignore
+            bases = (pydantic.generics.GenericModel, typing.Generic[*generic_parameters])
             input_type = create_model(f"{class_name}Inputs", __base__=bases, __module__=f.__module__, **model_spec)
         else:
-            input_type = create_model(f"{class_name}Inputs", __module__=f.__module__, **model_spec)  # type: ignore
+            input_type = create_model(f"{class_name}Inputs", __module__=f.__module__, **model_spec)
         input_type.update_forward_refs()
 
         # update parameter_dict types with bound_arguments
@@ -634,7 +634,7 @@ class LLMBoundSignature:
         return bound_arguments
 
 
-class LLMFunctionInterface(typing.Generic[P, T], typing.Callable[P, T]):  # type: ignore
+class LLMFunctionInterface(typing.Generic[P, T], typing.Callable[P, T]):
     def get_structured_prompt(self, *args: P.args, **kwargs: P.kwargs) -> LLMStructuredPrompt:
         raise NotImplementedError
 
@@ -695,10 +695,10 @@ class LLMFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):
 
         llm_bound_signature = LLMBoundSignature.from_call(self, args, kwargs)
         return_value = llm_bound_signature.structured_prompt(language_model_or_chat_chain)
-        return return_value  # type: ignore
+        return return_value
 
 
-class LLMExplicitFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):  # type: ignore
+class LLMExplicitFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):
     """
     A callable that can be called with a chat model.
     """
@@ -714,7 +714,7 @@ class LLMExplicitFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):  # 
         signature = inspect.signature(self, eval_str=True)
 
         # get all parameters
-        parameters_items: list[tuple[str, inspect.Parameter]] = list(signature.parameters.items())  # type: ignore
+        parameters_items: list[tuple[str, inspect.Parameter]] = list(signature.parameters.items())
         # check that there is at least one parameter
         if not parameters_items:
             raise ValueError("The function must have at least one parameter.")
@@ -763,7 +763,7 @@ class LLMExplicitFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):  # 
 
         llm_bound_signature = self.llm_bound_signature(input)
         return_value = llm_bound_signature.structured_prompt(language_model_or_chat_chain)
-        return return_value  # type: ignore
+        return return_value
 
 
 F_types: typing.TypeAlias = (

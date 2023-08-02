@@ -6,9 +6,10 @@ from typing import Tuple
 from langchain.chat_models.base import BaseChatModel
 from langchain.output_parsers import PydanticOutputParser
 from langchain.schema import BaseMessage, HumanMessage
-from pydantic import create_model
+from pydantic import BaseModel, create_model
 
 T = typing.TypeVar("T")
+B = typing.TypeVar("B", bound=BaseModel)
 
 
 @dataclass
@@ -17,7 +18,7 @@ class ChatChain:
     messages: list[BaseMessage]
 
     @property
-    def response(self):
+    def response(self) -> str:
         assert len(self.messages) >= 1
         return self.messages[-1].content
 
@@ -36,7 +37,7 @@ class ChatChain:
         messages.append(reply)
         return reply.content, dataclasses.replace(self, messages=messages)
 
-    def structured_query(self, question: str, return_type: type[T]) -> Tuple[T, "ChatChain"]:
+    def structured_query(self, question: str, return_type: type[B]) -> Tuple[B, "ChatChain"]:
         """Asks a question and returns the result in a single block."""
         # Build messages:
 
@@ -45,11 +46,11 @@ class ChatChain:
         else:
             return_info = (return_type, ...)
 
-        output_model = create_model("StructuredOutput", result=return_info)  # type: ignore
+        output_model = create_model("StructuredOutput", result=return_info)
         parser = PydanticOutputParser(pydantic_object=output_model)
         question_and_formatting = question + "\n\n" + parser.get_format_instructions()
         reply_content, chain = self.query(question_and_formatting)
-        parsed_reply = parser.parse(reply_content)
+        parsed_reply: B = typing.cast(B, parser.parse(reply_content))
 
         return parsed_reply, chain
 

@@ -71,7 +71,7 @@ class FakeChatModel(BaseChatModel, BaseModel):
     """An external LLM to use if the query is not found."""
 
     @staticmethod
-    def from_messages(messages_bag: Collection[list[BaseMessage]]):
+    def from_messages(messages_bag: Collection[list[BaseMessage]]) -> "FakeChatModel":
         messages_tuples_bag = {tuple(dict_to_tuple(m) for m in messages_to_dict(messages)) for messages in messages_bag}
         return FakeChatModel(messages_tuples_bag=messages_tuples_bag)
 
@@ -111,7 +111,7 @@ class FakeChatModel(BaseChatModel, BaseModel):
 
         if self.external_chat_model is not None:
             message = self.external_chat_model(messages, stop=stop)
-            message_tuple = dict_to_tuple(messages_to_dict([message]))
+            message_tuple = dict_to_tuple(messages_to_dict([message])[0])
             self.messages_tuples_bag.add(tuple(list(messages_tuple) + [message_tuple]))
             return message
 
