@@ -10,12 +10,29 @@ from langchain.llms.base import BaseLLM
 
 from llm_strategy.llm_function import (
     LLMFunction,
-    can_wrap_function_in_llm,
-    llm_function,
+    apply_decorator,
+    is_not_implemented,
+    unwrap_function,
 )
 
 P = typing_extensions.ParamSpec("P")
 T = typing.TypeVar("T")
+
+
+def can_wrap_function_in_llm(f: typing.Callable[P, T]) -> bool:
+    """
+    Return True if f can be wrapped in an LLMCall.
+    """
+    unwrapped = unwrap_function(f)
+    if not callable(unwrapped):
+        return False
+    if inspect.isgeneratorfunction(unwrapped):
+        return False
+    if inspect.iscoroutinefunction(unwrapped):
+        return False
+    if not inspect.isfunction(unwrapped) and not inspect.ismethod(unwrapped):
+        return False
+    return is_not_implemented(unwrapped)
 
 
 def llm_strategy(llm: BaseLLM) -> typing.Callable[[T], T]:  # noqa: C901
@@ -37,7 +54,40 @@ def llm_strategy(llm: BaseLLM) -> typing.Callable[[T], T]:  # noqa: C901
                 params = {field.name: getattr(f, field.name) for field in dataclasses.fields(f)}
                 return implemented_dataclass(**params)
         else:
-            return llm_function(llm)(f)
+
+            def inner_decorator(unwrapped_f):
+                llm_f = None
+
+                @functools.wraps(unwrapped_f)
+                def strategy_wrapper(*args, **kwargs):
+                    nonlocal llm_f
+                    if llm_f is None:
+                        # Get the signature of f
+                        sig = inspect.signature(unwrapped_f, eval_str=True)
+                        # Add a llm parameter to the signature as first argument
+                        new_params = [inspect.Parameter("__llm", inspect.Parameter.POSITIONAL_ONLY)]
+                        new_params.extend(sig.parameters.values())
+
+                        new_sig = sig.replace(parameters=new_params)
+
+                        def dummy_f(*args, **kwargs):
+                            raise NotImplementedError()
+
+                        new_f = functools.wraps(unwrapped_f)(dummy_f)
+                        new_f.__module__ = unwrapped_f.__module__
+                        # Set the signature of the new function
+                        new_f.__signature__ = new_sig
+
+                        del new_f.__wrapped__
+
+                        # Wrap the function in an LLMFunction
+                        llm_f = functools.wraps(new_f)(LLMFunction())
+
+                    return llm_f(llm, *args, **kwargs)
+
+                return strategy_wrapper
+
+            return apply_decorator(f, inner_decorator)
 
     return decorator
 
