@@ -241,6 +241,9 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
             # if the annotation is a type var, resolve it into the generic type map
             if isinstance(annotation, typing.TypeVar):
                 LLMStructuredPrompt.add_resolved_type(generic_type_map, annotation, type(attr_value))
+            # if the annotation is a generic type alias ignore
+            elif isinstance(annotation, type(set[str])):
+                continue
             # if the annotation is a type, check if it is a generic type
             elif issubclass(annotation, generics.GenericModel):
                 # check if the type is in generics._assigned_parameters
@@ -405,7 +408,8 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
                         + "\n\nPlease try again and avoid this issue."
                     )
             else:
-                raise OutputParserException(f"Failed to parse the output after {num_retries} retries.")
+                exception = OutputParserException(f"Failed to parse the output after {num_retries} retries.")
+                exception.add_note(chain)
         elif isinstance(language_model_or_chat_chain, BaseLLM):
             model: BaseChatModel = language_model_or_chat_chain
             for _ in range(num_retries):

@@ -6,7 +6,7 @@ import typing
 import pytest
 from langchain.chat_models.base import BaseChatModel
 from langchain.llms import BaseLLM
-from pydantic import Field, create_model
+from pydantic import BaseModel, Field, create_model
 from pydantic.generics import GenericModel
 
 from llm_strategy import llm_function
@@ -276,6 +276,20 @@ def test_llm_bound_signature_from_call_generic_input_outputs() -> None:
         f, (), dict(a=GenericType[int](value=0), b=GenericType[str](value=""))
     )
     assert llm_bound_signature.output_type.schema() == Output[GenericType2[int, str]].schema()
+
+
+def test_llm_bound_signature_from_call_generic_parameters() -> None:
+    def f(llm: BaseLLM, a: list[str], b: dict[str, list[str]]) -> dict[str, str]:
+        """Test docstring."""
+        raise NotImplementedError
+
+    class FInputs(BaseModel):
+        a: list[str]
+        b: dict[str, list[str]]
+
+    llm_bound_signature = LLMBoundSignature.from_call(f, (), dict(a=["a"], b=dict(t=["b"])))
+    assert llm_bound_signature.input_type.schema() == FInputs.schema()
+    assert llm_bound_signature.output_type.schema() == Output[dict[str, str]].schema()
 
 
 def test_llm_bound_signature_from_call_generic_function() -> None:
