@@ -135,9 +135,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
         return sub_schema
 
     def get_json_schema(self, exclude_default: bool = True) -> dict:
-        specific_input_type = type(self.input)
-
-        schema = pydantic.schema.schema([specific_input_type, self.output_type], ref_template="{model}")
+        schema = pydantic.schema.schema([self.input_type, self.output_type], ref_template="{model}")
         definitions: dict = deepcopy(schema["definitions"])
         # remove title and type from each sub dict in the definitions
         for value in definitions.values():
@@ -149,7 +147,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
                 if exclude_default:
                     property.pop("default", None)
 
-        input_schema = self.extract_from_definitions(definitions, specific_input_type)
+        input_schema = self.extract_from_definitions(definitions, self.input_type)
         output_schema = self.extract_from_definitions(definitions, self.output_type)
 
         schema = dict(
@@ -186,12 +184,15 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
             resolved_return_annotation = return_info[0]
 
         # create the output model
-        output_type = Output[return_type]  # noqa
+        resolved_output_model_type = Output[return_type]  # noqa
+
+        # resolve input_type
+        resolved_input_type = LLMStructuredPrompt.resolve_type(input_type, generic_type_map)
 
         return LLMStructuredPrompt(
             docstring=docstring,
-            input_type=input_type,
-            output_type=output_type,
+            input_type=resolved_input_type,
+            output_type=resolved_output_model_type,
             return_annotation=resolved_return_annotation,
             input=input,
         )
@@ -242,7 +243,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
             if isinstance(annotation, typing.TypeVar):
                 LLMStructuredPrompt.add_resolved_type(generic_type_map, annotation, type(attr_value))
             # if the annotation is a generic type alias ignore
-            elif isinstance(annotation, type(set[str])):
+            elif isinstance(annotation, types.GenericAlias):
                 continue
             # if the annotation is a type, check if it is a generic type
             elif issubclass(annotation, generics.GenericModel):

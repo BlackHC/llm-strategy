@@ -278,7 +278,7 @@ def test_llm_bound_signature_from_call_generic_input_outputs() -> None:
     assert llm_bound_signature.output_type.schema() == Output[GenericType2[int, str]].schema()
 
 
-def test_llm_bound_signature_from_call_generic_parameters() -> None:
+def test_llm_bound_signature_from_call_specified_generic_parameters() -> None:
     def f(llm: BaseLLM, a: list[str], b: dict[str, list[str]]) -> dict[str, str]:
         """Test docstring."""
         raise NotImplementedError
@@ -289,6 +289,22 @@ def test_llm_bound_signature_from_call_generic_parameters() -> None:
 
     llm_bound_signature = LLMBoundSignature.from_call(f, (), dict(a=["a"], b=dict(t=["b"])))
     assert llm_bound_signature.input_type.schema() == FInputs.schema()
+    assert llm_bound_signature.output_type.schema() == Output[dict[str, str]].schema()
+
+
+def test_llm_bound_signature_from_call_generic_collection() -> None:
+    T = typing.TypeVar("T")
+
+    def f(llm: BaseLLM, a: list[T], b: T) -> dict[T, T]:
+        """Test docstring."""
+        raise NotImplementedError
+
+    class FInputs(GenericModel, typing.Generic[T]):
+        a: list[T]
+        b: T
+
+    llm_bound_signature = LLMBoundSignature.from_call(f, (), dict(a=["a"], b="hello"))
+    assert llm_bound_signature.input_type.schema() == FInputs[str].schema()
     assert llm_bound_signature.output_type.schema() == Output[dict[str, str]].schema()
 
 
