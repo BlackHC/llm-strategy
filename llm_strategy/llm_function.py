@@ -16,10 +16,16 @@ import typing_extensions
 from langchain.chat_models.base import BaseChatModel
 from langchain.llms import BaseLLM
 from langchain.schema import BaseLanguageModel, OutputParserException
+from llmtracer import TraceNodeKind, trace_calls, update_event_properties, update_name
+from llmtracer.trace_builder import slicer
 from pydantic import BaseModel, ValidationError, create_model, generics
 from pydantic.fields import FieldInfo, Undefined
 from pydantic.generics import replace_types
 
+from llm_hyperparameters.track_hyperparameters import (
+    Hyperparameter,
+    track_hyperparameters,
+)
 from llm_strategy.chat_chain import ChatChain
 
 T = typing.TypeVar("T")
@@ -28,6 +34,37 @@ P = typing_extensions.ParamSpec("P")
 B = typing.TypeVar("B", bound=BaseModel)
 C = typing.TypeVar("C", bound=BaseModel)
 F = typing.TypeVar("F", bound=typing.Callable)
+
+
+def get_json_schema_hyperparameters(schema: dict):
+    """
+    Get the hyperparameters from a JSON schema recursively.
+
+    The hyperparameters are all fields for keys with "title" or "description".
+    """
+    hyperparameters = {}
+    for key, value in schema.items():
+        if key == "description":
+            hyperparameters[key] = value
+        elif isinstance(value, dict):
+            sub_hyperparameters = get_json_schema_hyperparameters(value)
+            if sub_hyperparameters:
+                hyperparameters[key] = sub_hyperparameters
+    return hyperparameters
+
+
+def update_json_schema_hyperparameters(schema: dict, hyperparameters: dict):
+    """
+    Nested merge of the schema dict with the hyperparameters dict.
+    """
+    for key, value in hyperparameters.items():
+        if key in schema:
+            if isinstance(value, dict):
+                update_json_schema_hyperparameters(schema[key], value)
+            else:
+                schema[key] = value
+        else:
+            schema[key] = value
 
 
 def unwrap_function(f: typing.Callable[P, T]) -> typing.Callable[P, T]:
@@ -318,6 +355,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
             raise ValueError(f"Could not find base generic type {base_generic_name} for {field_type}.")
         return base_generic_type
 
+    @trace_calls(name="LLMStructuredPrompt", kind=TraceNodeKind.CHAIN, capture_args=False, capture_return=False)
     def __call__(
         self,
         language_model_or_chat_chain: BaseLanguageModel | ChatChain,
@@ -333,18 +371,33 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
         schema = self.get_json_schema()
         # print(json.dumps(schema, indent=1))
 
+        update_json_schema_hyperparameters(
+            schema,
+            Hyperparameter("json_schema") @ get_json_schema_hyperparameters(schema),
+        )
+
+        update_event_properties(
+            dict(
+                arguments=dict(self.input),
+            )
+        )
+
         parsed_output = self.query(language_model_or_chat_chain, schema)
 
         # print(f"Input: {self.input.json(indent=1)}")
         # print(f"Output: {json.dumps(json.loads(parsed_output.json())['return_value'], indent=1)}")
 
+        update_event_properties(dict(result=parsed_output.return_value))
+
         return parsed_output.return_value
 
+    @track_hyperparameters
     def query(self, language_model_or_chat_chain, schema):  # noqa: C901
         # create the prompt
-        json_dumps_kwargs = dict(indent=None)
-        additional_definitions_prompt_template = (
-            "Here is the schema for additional data types:\n```\n{additional_definitions}\n```\n\n"
+        json_dumps_kwargs = Hyperparameter("json_dumps_kwargs") @ dict(indent=None)
+        additional_definitions_prompt_template = Hyperparameter(
+            "additional_definitions_prompt_template",
+            "Here is the schema for additional data types:\n```\n{additional_definitions}\n```\n\n",
         )
 
         optional_additional_definitions_prompt = ""
@@ -354,30 +407,14 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
             )
 
         prompt = (
-            "{docstring}\n"
-            "\n"
-            "The input and output are formatted as a JSON interface that conforms to the JSON schemas below.\n"
-            "\n"
-            'As an example, for the schema {{"properties": {{"foo": {{"description": "a list of '
-            'strings", "type": "array", "items": {{"type": "string"}}}}}}, "required": ["foo"]}}}} the object {{'
-            '"foo": ["bar", "baz"]}} is a well-formatted instance of the schema. The object {{"properties": {{'
-            '"foo": '
-            '["bar", "baz"]}}}} is not well-formatted.\n'
-            "\n"
-            "{optional_additional_definitions_prompt}"
-            "Here is the input schema:\n"
-            "```\n"
-            "{input_schema}\n"
-            "```\n"
-            "\n"
-            "Here is the output schema:\n"
-            "```\n"
-            "{output_schema}\n"
-            "```\n"
-            "Now output the results for the following inputs:\n"
-            "```\n"
-            "{inputs}\n"
-            "```"
+            Hyperparameter(
+                "llm_structured_prompt_template",
+                description=(
+                    "The general-purpose prompt for the structured prompt execution. It tells the LLM what to "
+                    "do and how to read function arguments and structure return values. "
+                ),
+            )
+            @ '{docstring}\n\nThe input and output are formatted as a JSON interface that conforms to the JSON schemas below.\n\nAs an example, for the schema {{"properties": {{"foo": {{"description": "a list of strings", "type": "array", "items": {{"type": "string"}}}}}}, "required": ["foo"]}}}} the object {{"foo": ["bar", "baz"]}} is a well-formatted instance of the schema. The object {{"properties": {{"foo": ["bar", "baz"]}}}} is not well-formatted.\n\n{optional_additional_definitions_prompt}Here is the input schema:\n```\n{input_schema}\n```\n\nHere is the output schema:\n```\n{output_schema}\n```\nNow output the results for the following inputs:\n```\n{inputs}\n```'
         ).format(
             docstring=self.docstring,
             optional_additional_definitions_prompt=optional_additional_definitions_prompt,
@@ -387,7 +424,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
         )
 
         # get the response
-        num_retries = 3
+        num_retries = Hyperparameter("num_retries_on_parser_failure") @ 3
         if language_model_or_chat_chain is None:
             raise ValueError("The language model or chat chain must be provided.")
 
@@ -404,9 +441,9 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
                     break
                 except OutputParserException as e:
                     prompt = (
-                        "Tried to parse your output but failed:\n\n"
+                        Hyperparameter("error_prompt") @ "Tried to parse your output but failed:\n\n"
                         + str(e)
-                        + "\n\nPlease try again and avoid this issue."
+                        + Hyperparameter("retry_prompt") @ "\n\nPlease try again and avoid this issue."
                     )
             else:
                 exception = OutputParserException(f"Failed to parse the output after {num_retries} retries.")
@@ -422,11 +459,11 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
                 except OutputParserException as e:
                     prompt = (
                         prompt
-                        + "\n\nReceived the output\n\n"
+                        + Hyperparameter("output_prompt") @ "\n\nReceived the output\n\n"
                         + output
-                        + "Tried to parse your output but failed:\n\n"
+                        + Hyperparameter("error_prompt") @ "Tried to parse your output but failed:\n\n"
                         + str(e)
-                        + "\n\nPlease try again and avoid this issue."
+                        + Hyperparameter("retry_prompt") @ "\n\nPlease try again and avoid this issue."
                     )
             else:
                 raise ValueError(f"Failed to parse the output after {num_retries} retries.")
@@ -677,6 +714,7 @@ class LLMFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):
 
         return self(language_model_or_chat_chain, **dict(input_object))
 
+    @trace_calls(kind=TraceNodeKind.CHAIN, capture_return=slicer[1:], capture_args=True)
     def __call__(
         self,
         language_model_or_chat_chain: BaseLanguageModel | ChatChain,
@@ -684,6 +722,7 @@ class LLMFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):
         **kwargs: P.kwargs,
     ) -> T:
         """Call the function."""
+        update_name(self.__name__)
 
         # check that the first argument is an instance of BaseLanguageModel
         # or a TrackedChatChain or UntrackedChatChain
@@ -751,8 +790,11 @@ class LLMExplicitFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):
     def __getattr__(self, item):
         return getattr(self.__wrapped__, item)
 
+    @trace_calls(kind=TraceNodeKind.CHAIN, capture_return=True, capture_args=slicer[1:])
     def __call__(self, language_model_or_chat_chain: BaseLanguageModel | ChatChain, input: BaseModel) -> T:
         """Call the function."""
+        update_name(self.__name__)
+
         # check that the first argument is an instance of BaseLanguageModel
         # or a TrackedChatChain or UntrackedChatChain
         if not isinstance(language_model_or_chat_chain, BaseLanguageModel | ChatChain):
