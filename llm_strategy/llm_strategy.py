@@ -37,7 +37,7 @@ def can_wrap_function_in_llm(f: typing.Callable[P, T]) -> bool:
 
 def llm_strategy(llm: BaseLLM) -> typing.Callable[[T], T]:  # noqa: C901
     """
-    A strategy that implements what ever it decorates (or is called on) using the LLM.
+    A strategy that implements whatever it decorates (or is called on) using the LLM.
     """
 
     @typing.no_type_check

@@ -874,7 +874,7 @@ def apply_decorator(f: F_types, decorator) -> F_types:
         if not is_not_implemented(f):
             raise ValueError("The function must not be implemented.")
 
-        specific_llm_function = functools.wraps(f)(decorator(f))
+        specific_llm_function = track_hyperparameters(functools.wraps(f)(decorator(f)))
 
     return typing.cast(F_types, specific_llm_function)
 
