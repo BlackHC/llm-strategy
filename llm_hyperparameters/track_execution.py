@@ -1,9 +1,8 @@
 import typing
 from typing import List, Optional
 
-from langchain.chat_models.base import BaseChatModel
 from langchain.schema import BaseMessage, ChatMessage, ChatResult, LLMResult
-from langchain_core.language_models import BaseLanguageModel, BaseLLM
+from langchain_core.language_models import BaseLanguageModel, BaseLLM, BaseChatModel
 from llmtracer import TraceNodeKind, trace_calls, trace_object_converter
 from llmtracer.object_converter import ObjectConverter
 from pydantic import BaseModel, Field
@@ -145,6 +144,10 @@ class TrackedLLM(BaseLLM):
 class TrackedChatModel(BaseChatModel):
     chat_model: BaseChatModel
     tracked_chats: ChatTree = Field(default_factory=ChatTree.create_root)
+
+    @property
+    def _llm_type(self) -> str:
+        return self.chat_model._llm_type
 
     @trace_calls(name="TrackedChatModel", kind=TraceNodeKind.LLM, capture_args=True, capture_return=True)
     def invoke(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> BaseMessage:

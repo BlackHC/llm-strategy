@@ -303,7 +303,7 @@ _hyperparameters_builder: HyperparametersBuilder | None = None
 
 
 @dataclass
-class TrackedFunction(typing.Callable[P, T], typing.Generic[P, T], CallableWrapper):  # type: ignore
+class TrackedFunction(CallableWrapper, typing.Callable[P, T], typing.Generic[P, T]):  # type: ignore
     """
     A callable that can be called with a chat model.
     """

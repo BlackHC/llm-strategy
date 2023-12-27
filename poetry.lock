@@ -1047,13 +1047,13 @@ test = ["coverage", "pytest", "pytest-cov"]
 
 [[package]]
 name = "llmtracer"
-version = "1.2.0"
+version = "1.2.1"
 description = "LLMTracer: A tool to trace the execution of a program that uses LLMs and visualize the results."
 optional = false
 python-versions = ">=3.11,<4.0"
 files = [
-    {file = "llmtracer-1.2.0-py3-none-any.whl", hash = "sha256:5eef45cb3de6a695c722a9073a739728ede3fe40d9701d2a3b410885d0af8a6a"},
-    {file = "llmtracer-1.2.0.tar.gz", hash = "sha256:03836f9dc1179a4d4eeca5ac853edbe1c0e9d6a9a830d583c986378ba716d5c7"},
+    {file = "llmtracer-1.2.1-py3-none-any.whl", hash = "sha256:abb328784d47cd4ae0077b0851f7ca339caa7b432424360c97531ced35dd2fab"},
+    {file = "llmtracer-1.2.1.tar.gz", hash = "sha256:8882bd06b602c269dfd69d68bb9d2a90241376d38ddb02db00fc69194ebe7450"},
 ]
 
 [package.dependencies]
@@ -3383,4 +3383,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<4.0"
-content-hash = "3e9748b7bc00ff68e99ee87908673352478b1278fe540e52283a3a5e8d7dba44"
+content-hash = "b64a7f7a4858b500c3590c6af1b90b534fe476d171c6422c0d7c2831f2238fb2"

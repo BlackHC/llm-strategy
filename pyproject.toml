@@ -17,7 +17,7 @@ langchain = ">=0.0.352"
 openai = ">=1.6.1"
 typing-extensions = "^4.9.0"
 pydantic = "^1.10.13"
-llmtracer = "^1.2.0"
+llmtracer = "^1.2.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

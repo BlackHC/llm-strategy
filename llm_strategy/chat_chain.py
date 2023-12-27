@@ -25,7 +25,6 @@ class ChatChain:
     def append(self, messages: list[BaseMessage]) -> "ChatChain":
         return dataclasses.replace(self, messages=self.messages + messages)
 
-    # overload operator +
     def __add__(self, other: list[BaseMessage]) -> "ChatChain":
         return self.append(other)
 
@@ -34,7 +33,6 @@ class ChatChain:
         # Build messages:
         messages = self.messages + [HumanMessage(content=question)]
         model_args = model_args or {}
-        print(model_args)
         reply = self.chat_model.invoke(messages, **model_args)
         messages.append(reply)
         return reply.content, dataclasses.replace(self, messages=messages)
