@@ -2,7 +2,7 @@ import typing
 from typing import List, Optional
 
 from langchain.schema import BaseMessage, ChatMessage, ChatResult, LLMResult
-from langchain_core.language_models import BaseLanguageModel, BaseLLM, BaseChatModel
+from langchain_core.language_models import BaseChatModel, BaseLanguageModel, BaseLLM
 from llmtracer import TraceNodeKind, trace_calls, trace_object_converter
 from llmtracer.object_converter import ObjectConverter
 from pydantic import BaseModel, Field

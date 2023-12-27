@@ -1,13 +1,13 @@
 # Add a manual test that makes sure that we can use the json response format for OpenAI
-import json
-
 import openai
-#%%
+
+# %%
 from langchain_community.chat_models import ChatOpenAI
+
 from llm_strategy.chat_chain import ChatChain
 
 base_llm = ChatOpenAI(max_tokens=64, model_name="gpt-3.5-turbo-1106")
-#%%
+# %%
 
 chain = ChatChain(base_llm, [])
 try:
@@ -17,4 +17,3 @@ except openai.BadRequestError as e:
     assert "must contain the word 'json'" in e.message
 else:
     raise AssertionError("Expected an exception")
-

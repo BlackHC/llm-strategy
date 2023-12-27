@@ -1,7 +1,7 @@
 import dataclasses
 import typing
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, cast
 
 from langchain.chat_models.base import BaseChatModel
 from langchain.output_parsers import PydanticOutputParser
@@ -20,7 +20,7 @@ class ChatChain:
     @property
     def response(self) -> str:
         assert len(self.messages) >= 1
-        return self.messages[-1].content
+        return cast(str, self.messages[-1].content)
 
     def append(self, messages: list[BaseMessage]) -> "ChatChain":
         return dataclasses.replace(self, messages=self.messages + messages)
@@ -28,23 +28,25 @@ class ChatChain:
     def __add__(self, other: list[BaseMessage]) -> "ChatChain":
         return self.append(other)
 
-    def query(self, question: str, model_args: dict=None) -> Tuple[str, "ChatChain"]:
+    def query(self, question: str, model_args: dict | None = None) -> Tuple[str, "ChatChain"]:
         """Asks a question and returns the result in a single block."""
         # Build messages:
         messages = self.messages + [HumanMessage(content=question)]
         model_args = model_args or {}
         reply = self.chat_model.invoke(messages, **model_args)
         messages.append(reply)
-        return reply.content, dataclasses.replace(self, messages=messages)
+        return cast(str, reply.content), dataclasses.replace(self, messages=messages)
 
-    def enforce_json_response(self, model_args: dict = None) -> dict:
+    def enforce_json_response(self, model_args: dict | None = None) -> dict:
         model_args = model_args or {}
         # Check if the language model is of type "openai" and extend model args with a response format in that case
         if "openai" in self.chat_model._llm_type:
             model_args = {**model_args, "response_format": dict(type="json_object")}
         return model_args
 
-    def structured_query(self, question: str, return_type: type[B], model_args: dict = None) -> Tuple[B, "ChatChain"]:
+    def structured_query(
+        self, question: str, return_type: type[B], model_args: dict | None = None
+    ) -> Tuple[B, "ChatChain"]:
         """Asks a question and returns the result in a single block."""
         # Build messages:
 
@@ -54,7 +56,7 @@ class ChatChain:
             return_info = (return_type, ...)
 
         output_model = create_model("StructuredOutput", result=return_info)
-        parser = PydanticOutputParser(pydantic_object=output_model)
+        parser: PydanticOutputParser = PydanticOutputParser(pydantic_object=output_model)
         question_and_formatting = question + "\n\n" + parser.get_format_instructions()
 
         reply_content, chain = self.query(question_and_formatting, **self.enforce_json_response(model_args))

@@ -8,16 +8,16 @@ from langchain.schema import AIMessage, BaseMessage, ChatMessage, ChatResult, LL
 class ChatModelAsLLM(BaseLLM):
     chat_model: BaseChatModel
 
-    def invoke(self, prompt: str, stop: Optional[List[str]] = None, track: bool = False, **kwargs) -> str:
-        response = self.chat_model.call_as_llm(prompt, stop, **kwargs)
+    def invoke(self, prompt: str, *, stop: Optional[List[str]] = None, **kwargs) -> str:
+        response = self.chat_model.call_as_llm(prompt, stop=stop, **kwargs)
         return response
 
     __call__ = invoke
 
-    def _generate(self, prompts: List[str], stop: Optional[List[str]] = None, **kwargs) -> LLMResult:
+    def _generate(self, prompts: List[str], *, stop: Optional[List[str]] = None, **kwargs) -> LLMResult:
         raise NotImplementedError()
 
-    async def _agenerate(self, prompts: List[str], stop: Optional[List[str]] = None, **kwargs) -> LLMResult:
+    async def _agenerate(self, prompts: List[str], *, stop: Optional[List[str]] = None, **kwargs) -> LLMResult:
         raise NotImplementedError()
 
     @property
@@ -51,7 +51,7 @@ class LLMAsChatModel(BaseChatModel):
     def _llm_type(self) -> str:
         return self.llm._llm_type
 
-    def invoke(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> BaseMessage:
+    def invoke(self, messages: List[BaseMessage], *, stop: Optional[List[str]] = None, **kwargs) -> BaseMessage:
         prompt = self.convert_messages_to_prompt(messages)
         stop = [] if stop is None else list(stop)
         response = self.llm.invoke(prompt, stop=["<|im_end|>"] + stop, **kwargs)
@@ -59,8 +59,8 @@ class LLMAsChatModel(BaseChatModel):
 
     __call__ = invoke
 
-    def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> ChatResult:
+    def _generate(self, messages: List[BaseMessage], *, stop: Optional[List[str]] = None, **kwargs) -> ChatResult:
         raise NotImplementedError()
 
-    async def _agenerate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> ChatResult:
+    async def _agenerate(self, messages: List[BaseMessage], *, stop: Optional[List[str]] = None, **kwargs) -> ChatResult:
         raise NotImplementedError()
