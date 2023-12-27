@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, override
 
 from langchain.chat_models.base import BaseChatModel
 from langchain.llms import BaseLLM
@@ -8,18 +8,26 @@ from langchain.schema import AIMessage, BaseMessage, ChatMessage, ChatResult, LL
 class ChatModelAsLLM(BaseLLM):
     chat_model: BaseChatModel
 
+    @override
+    def dict(self, **kwargs: Any) -> Dict:
+        return self.chat_model.dict()
+
+    @override
     def invoke(self, prompt: str, *, stop: Optional[List[str]] = None, **kwargs) -> str:
         response = self.chat_model.call_as_llm(prompt, stop=stop, **kwargs)
         return response
 
     __call__ = invoke
 
+    @override
     def _generate(self, prompts: List[str], *, stop: Optional[List[str]] = None, **kwargs) -> LLMResult:
         raise NotImplementedError()
 
+    @override
     async def _agenerate(self, prompts: List[str], *, stop: Optional[List[str]] = None, **kwargs) -> LLMResult:
         raise NotImplementedError()
 
+    @override
     @property
     def _llm_type(self) -> str:
         return self.chat_model._llm_type
@@ -27,6 +35,10 @@ class ChatModelAsLLM(BaseLLM):
 
 class LLMAsChatModel(BaseChatModel):
     llm: BaseLLM
+
+    @override
+    def dict(self, **kwargs: Any) -> Dict:
+        return self.llm.dict()
 
     @staticmethod
     def convert_messages_to_prompt(messages: list[BaseMessage]) -> str:
@@ -47,10 +59,12 @@ class LLMAsChatModel(BaseChatModel):
         prompt += "<|im_start|>assistant\n"
         return prompt
 
+    @override
     @property
     def _llm_type(self) -> str:
         return self.llm._llm_type
 
+    @override
     def invoke(self, messages: List[BaseMessage], *, stop: Optional[List[str]] = None, **kwargs) -> BaseMessage:
         prompt = self.convert_messages_to_prompt(messages)
         stop = [] if stop is None else list(stop)
@@ -59,8 +73,12 @@ class LLMAsChatModel(BaseChatModel):
 
     __call__ = invoke
 
+    @override
     def _generate(self, messages: List[BaseMessage], *, stop: Optional[List[str]] = None, **kwargs) -> ChatResult:
         raise NotImplementedError()
 
-    async def _agenerate(self, messages: List[BaseMessage], *, stop: Optional[List[str]] = None, **kwargs) -> ChatResult:
+    @override
+    async def _agenerate(
+        self, messages: List[BaseMessage], *, stop: Optional[List[str]] = None, **kwargs
+    ) -> ChatResult:
         raise NotImplementedError()

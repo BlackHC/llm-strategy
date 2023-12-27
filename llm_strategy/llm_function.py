@@ -452,7 +452,11 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
         elif isinstance(language_model_or_chat_chain, BaseLLM):
             model: BaseChatModel = language_model_or_chat_chain
             # Check if the language model is of type "openai" and extend model args with a response format in that case
-            if "openai" in model._llm_type:
+            model_dict = model.dict()
+            if "openai" in model_dict["_type"] and model_dict.get("model_name") in (
+                    "gpt-4-1106-preview",
+                    "gpt-3.5-turbo-1106",
+            ):
                 model_args = dict(response_format=dict(type="json_object"))
             else:
                 model_args = {}

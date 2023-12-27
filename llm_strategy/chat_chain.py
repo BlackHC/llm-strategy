@@ -40,7 +40,11 @@ class ChatChain:
     def enforce_json_response(self, model_args: dict | None = None) -> dict:
         model_args = model_args or {}
         # Check if the language model is of type "openai" and extend model args with a response format in that case
-        if "openai" in self.chat_model._llm_type:
+        model_dict = self.chat_model.dict()
+        if "openai" in model_dict["_type"] and model_dict.get("model_name") in (
+            "gpt-4-1106-preview",
+            "gpt-3.5-turbo-1106",
+        ):
             model_args = {**model_args, "response_format": dict(type="json_object")}
         return model_args
 
