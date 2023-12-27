@@ -79,10 +79,10 @@ class FakeChatModel(BaseChatModel, BaseModel):
         messages_tuples_bag = {tuple(dict_to_tuple(m) for m in messages_to_dict(messages)) for messages in messages_bag}
         return FakeChatModel(messages_tuples_bag=messages_tuples_bag)
 
-    async def _agenerate(self, messages: list[BaseMessage], stop: list[str] | None = None) -> ChatResult:
+    async def _agenerate(self, messages: list[BaseMessage], stop: list[str] | None = None, **kwargs) -> ChatResult:
         raise NotImplementedError
 
-    def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None) -> ChatResult:
+    def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> ChatResult:
         raise NotImplementedError
 
     def __del__(self) -> None:
