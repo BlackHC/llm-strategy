@@ -2,14 +2,8 @@ import typing
 from typing import List, Optional
 
 from langchain.chat_models.base import BaseChatModel
-from langchain.llms import BaseLLM
-from langchain.schema import (
-    BaseLanguageModel,
-    BaseMessage,
-    ChatMessage,
-    ChatResult,
-    LLMResult,
-)
+from langchain.schema import BaseMessage, ChatMessage, ChatResult, LLMResult
+from langchain_core.language_models import BaseLanguageModel, BaseLLM
 from llmtracer import TraceNodeKind, trace_calls, trace_object_converter
 from llmtracer.object_converter import ObjectConverter
 from pydantic import BaseModel, Field
@@ -129,16 +123,18 @@ class TrackedLLM(BaseLLM):
     tracked_prompts: PromptTree = Field(default_factory=PromptTree.create_root)
 
     @trace_calls(name="TrackedLLM", kind=TraceNodeKind.LLM, capture_args=True, capture_return=True)
-    def __call__(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+    def invoke(self, prompt: str, stop: Optional[List[str]] = None, **kwargs) -> str:
         node = self.tracked_prompts.insert(prompt)
-        response = self.llm(prompt, stop)
+        response = self.llm.invoke(prompt, stop, **kwargs)
         node.insert(response)
         return response
 
-    def _generate(self, prompts: List[str], stop: Optional[List[str]] = None) -> LLMResult:
+    __call__ = invoke
+
+    def _generate(self, prompts: List[str], stop: Optional[List[str]] = None, **kwargs) -> LLMResult:
         raise NotImplementedError()
 
-    async def _agenerate(self, prompts: List[str], stop: Optional[List[str]] = None) -> LLMResult:
+    async def _agenerate(self, prompts: List[str], stop: Optional[List[str]] = None, **kwargs) -> LLMResult:
         raise NotImplementedError()
 
     @property
@@ -151,20 +147,22 @@ class TrackedChatModel(BaseChatModel):
     tracked_chats: ChatTree = Field(default_factory=ChatTree.create_root)
 
     @trace_calls(name="TrackedChatModel", kind=TraceNodeKind.LLM, capture_args=True, capture_return=True)
-    def __call__(self, messages: List[BaseMessage], stop: Optional[List[str]] = None) -> BaseMessage:
-        response_message = self.chat_model(messages, stop)
+    def invoke(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> BaseMessage:
+        response_message = self.chat_model.invoke(messages, stop, **kwargs)
         self.tracked_chats.insert(messages + [response_message])
         return response_message
 
-    def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None) -> ChatResult:
-        chat_result = self.chat_model._generate(messages, stop)
+    __call__ = invoke
+
+    def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> ChatResult:
+        chat_result = self.chat_model._generate(messages, stop, **kwargs)
         node = self.tracked_chats.insert(messages)
         for generation in chat_result.generations:
             node.insert([generation.message])
         return chat_result
 
-    async def _agenerate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None) -> ChatResult:
-        chat_result = await self.chat_model._agenerate(messages, stop)
+    async def _agenerate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> ChatResult:
+        chat_result = await self.chat_model._agenerate(messages, stop, **kwargs)
         node = self.tracked_chats.insert(messages)
         for generation in chat_result.generations:
             node.insert([generation.message])

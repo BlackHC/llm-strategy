@@ -13,33 +13,33 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4.0"
-langchain = ">=0.0.127"
-openai = ">=0.25.0"
-typing-extensions = "^4.4.0"
-pydantic = "^1.10.2"
-llmtracer = "^1.0.0"
+langchain = ">=0.0.352"
+openai = ">=1.6.1"
+typing-extensions = "^4.9.0"
+pydantic = "^1.10.13"
+llmtracer = "^1.2.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.2.0"
-pytest-cov = "^4.0.0"
-deptry = "^0.6.6"
+pytest = "^7.4.3"
+pytest-cov = "^4.1.0"
+deptry = "^0.6"
 mypy = "^0.991"
-pre-commit = "^2.20.0"
+pre-commit = "^2.21.0"
 tox = "^3.28.0"
-types-pyyaml = "^6.0.12.2"
-types-dataclasses = "^0.6.6"
+types-pyyaml = "^6.0.12.12"
+types-dataclasses = "^0.6"
 
 [tool.poetry.group.docs.dependencies]
-mkdocs = "^1.4.2"
+mkdocs = "^1.5.3"
 mkdocs-material = "^8.5.11"
 mkdocstrings = {extras = ["python"], version = "^0.19.1"}
-mkdocs-gen-files = "^0.4.0"
+mkdocs-gen-files = "^0.4"
 mkdocs-section-index = "^0.3.4"
-mkdocs-literate-nav = "^0.5.0"
-mkdocs-include-markdown-plugin = {version = "^4.0.3",  python = ">=3.9,<3.12"}
+mkdocs-literate-nav = "^0.5"
+mkdocs-include-markdown-plugin = {version = "^4.0.4",  python = ">=3.9,<3.12"}
 
 [tool.poetry.group.examples.dependencies]
-textual = {version = "^0.7.0", extras = ["dev"]}
+textual = {version = "^0", extras = ["dev"]}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

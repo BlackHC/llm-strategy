@@ -70,6 +70,10 @@ class FakeChatModel(BaseChatModel, BaseModel):
     external_chat_model: BaseChatModel | None = None
     """An external LLM to use if the query is not found."""
 
+    @property
+    def _llm_type(self) -> str:
+        return "fake"
+
     @staticmethod
     def from_messages(messages_bag: Collection[list[BaseMessage]]) -> "FakeChatModel":
         messages_tuples_bag = {tuple(dict_to_tuple(m) for m in messages_to_dict(messages)) for messages in messages_bag}
@@ -93,7 +97,7 @@ class FakeChatModel(BaseChatModel, BaseModel):
             }
             print(f"messages_bag = {self.messages_tuples_bag!r}")
 
-    def __call__(self, messages: list[BaseMessage], stop: list[str] | None = None) -> BaseMessage:
+    def invoke(self, messages: list[BaseMessage], stop: list[str] | None = None, **kwargs) -> BaseMessage:
         """Return the query if it exists, else print the code to update the query."""
         assert stop is None, "Stop words are not supported for FakeChatModel."
 
@@ -110,7 +114,7 @@ class FakeChatModel(BaseChatModel, BaseModel):
                 return next_message
 
         if self.external_chat_model is not None:
-            message = self.external_chat_model(messages, stop=stop)
+            message = self.external_chat_model.invoke(messages, stop=stop, **kwargs)
             message_tuple = dict_to_tuple(messages_to_dict([message])[0])
             self.messages_tuples_bag.add(tuple(list(messages_tuple) + [message_tuple]))
             return message
@@ -121,3 +125,5 @@ class FakeChatModel(BaseChatModel, BaseModel):
 """
         print(code_snippet)
         raise NotImplementedError("No query provided. Add the following to the queries dict:\n\n" + code_snippet)
+
+    __call__ = invoke

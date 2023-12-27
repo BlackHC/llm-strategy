@@ -57,7 +57,7 @@ class FakeLLM(LLM, BaseModel):
                 return response
 
         if self.external_llm is not None:
-            response = self.external_llm(prompt, stop=stop)
+            response = self.external_llm.invoke(prompt, stop=stop)
             text = prompt + response
             self.texts.add(text)
             return response

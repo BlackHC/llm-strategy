@@ -8,19 +8,21 @@ from langchain.schema import AIMessage, BaseMessage, ChatMessage, ChatResult, LL
 class ChatModelAsLLM(BaseLLM):
     chat_model: BaseChatModel
 
-    def __call__(self, prompt: str, stop: Optional[List[str]] = None, track: bool = False) -> str:
-        response = self.chat_model.call_as_llm(prompt, stop)
+    def invoke(self, prompt: str, stop: Optional[List[str]] = None, track: bool = False, **kwargs) -> str:
+        response = self.chat_model.call_as_llm(prompt, stop, **kwargs)
         return response
 
-    def _generate(self, prompts: List[str], stop: Optional[List[str]] = None) -> LLMResult:
+    __call__ = invoke
+
+    def _generate(self, prompts: List[str], stop: Optional[List[str]] = None, **kwargs) -> LLMResult:
         raise NotImplementedError()
 
-    async def _agenerate(self, prompts: List[str], stop: Optional[List[str]] = None) -> LLMResult:
+    async def _agenerate(self, prompts: List[str], stop: Optional[List[str]] = None, **kwargs) -> LLMResult:
         raise NotImplementedError()
 
     @property
     def _llm_type(self) -> str:
-        return self.chat_model.__repr_name__().lower()
+        return self.chat_model._llm_type
 
 
 class LLMAsChatModel(BaseChatModel):
@@ -45,14 +47,20 @@ class LLMAsChatModel(BaseChatModel):
         prompt += "<|im_start|>assistant\n"
         return prompt
 
-    def __call__(self, messages: List[BaseMessage], stop: Optional[List[str]] = None) -> BaseMessage:
+    @property
+    def _llm_type(self) -> str:
+        return self.llm._llm_type
+
+    def invoke(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> BaseMessage:
         prompt = self.convert_messages_to_prompt(messages)
         stop = [] if stop is None else list(stop)
-        response = self.llm(prompt, ["<|im_end|>"] + stop)
+        response = self.llm.invoke(prompt, stop=["<|im_end|>"] + stop, **kwargs)
         return AIMessage(content=response)
 
-    def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None) -> ChatResult:
+    __call__ = invoke
+
+    def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> ChatResult:
         raise NotImplementedError()
 
-    async def _agenerate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None) -> ChatResult:
+    async def _agenerate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> ChatResult:
         raise NotImplementedError()

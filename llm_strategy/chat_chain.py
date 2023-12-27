@@ -29,15 +29,24 @@ class ChatChain:
     def __add__(self, other: list[BaseMessage]) -> "ChatChain":
         return self.append(other)
 
-    def query(self, question: str) -> Tuple[str, "ChatChain"]:
+    def query(self, question: str, model_args: dict=None) -> Tuple[str, "ChatChain"]:
         """Asks a question and returns the result in a single block."""
         # Build messages:
         messages = self.messages + [HumanMessage(content=question)]
-        reply = self.chat_model(messages)
+        model_args = model_args or {}
+        print(model_args)
+        reply = self.chat_model.invoke(messages, **model_args)
         messages.append(reply)
         return reply.content, dataclasses.replace(self, messages=messages)
 
-    def structured_query(self, question: str, return_type: type[B]) -> Tuple[B, "ChatChain"]:
+    def enforce_json_response(self, model_args: dict = None) -> dict:
+        model_args = model_args or {}
+        # Check if the language model is of type "openai" and extend model args with a response format in that case
+        if "openai" in self.chat_model._llm_type:
+            model_args = {**model_args, "response_format": dict(type="json_object")}
+        return model_args
+
+    def structured_query(self, question: str, return_type: type[B], model_args: dict = None) -> Tuple[B, "ChatChain"]:
         """Asks a question and returns the result in a single block."""
         # Build messages:
 
@@ -49,7 +58,8 @@ class ChatChain:
         output_model = create_model("StructuredOutput", result=return_info)
         parser = PydanticOutputParser(pydantic_object=output_model)
         question_and_formatting = question + "\n\n" + parser.get_format_instructions()
-        reply_content, chain = self.query(question_and_formatting)
+
+        reply_content, chain = self.query(question_and_formatting, **self.enforce_json_response(model_args))
         parsed_reply: B = typing.cast(B, parser.parse(reply_content))
 
         return parsed_reply, chain

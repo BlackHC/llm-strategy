@@ -14,8 +14,8 @@ import pydantic
 import pydantic.schema
 import typing_extensions
 from langchain.chat_models.base import BaseChatModel
-from langchain.llms import BaseLLM
-from langchain.schema import BaseLanguageModel, OutputParserException
+from langchain.schema import OutputParserException
+from langchain_core.language_models import BaseLanguageModel, BaseLLM
 from llmtracer import TraceNodeKind, trace_calls, update_event_properties, update_name
 from llmtracer.trace_builder import slicer
 from pydantic import BaseModel, ValidationError, create_model, generics
@@ -434,7 +434,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
         if isinstance(language_model_or_chat_chain, ChatChain):
             chain = language_model_or_chat_chain
             for _ in range(num_retries):
-                output, chain = chain.query(prompt)
+                output, chain = chain.query(prompt, model_args=chain.enforce_json_response())
 
                 try:
                     parsed_output = parse(output, self.output_type)
@@ -448,10 +448,17 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
             else:
                 exception = OutputParserException(f"Failed to parse the output after {num_retries} retries.")
                 exception.add_note(chain)
+                raise exception
         elif isinstance(language_model_or_chat_chain, BaseLLM):
             model: BaseChatModel = language_model_or_chat_chain
+            # Check if the language model is of type "openai" and extend model args with a response format in that case
+            if "openai" in model._llm_type:
+                model_args = dict(response_format=dict(type="json_object"))
+            else:
+                model_args = {}
+
             for _ in range(num_retries):
-                output = model(prompt)
+                output = model(prompt, **model_args)
 
                 try:
                     parsed_output = parse(output, self.output_type)
@@ -466,7 +473,9 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
                         + Hyperparameter("retry_prompt") @ "\n\nPlease try again and avoid this issue."
                     )
             else:
-                raise ValueError(f"Failed to parse the output after {num_retries} retries.")
+                exception = OutputParserException(f"Failed to parse the output after {num_retries} retries.")
+                exception.add_note(prompt)
+                raise exception
         else:
             raise ValueError("The language model or chat chain must be provided.")
         return parsed_output
