@@ -33,10 +33,10 @@ bump2version = "^1.0.1"
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.5.3"
 mkdocs-material = "^8.5.11"
-mkdocstrings = {extras = ["python"], version = "^0.19.1"}
-mkdocs-gen-files = "^0.4"
-mkdocs-section-index = "^0.3.4"
-mkdocs-literate-nav = "^0.5"
+mkdocstrings = {extras = ["python"], version = "^0"}
+mkdocs-gen-files = "^0"
+mkdocs-section-index = "^0"
+mkdocs-literate-nav = "^0"
 mkdocs-include-markdown-plugin = {version = "^4.0.4",  python = ">=3.9,<3.12"}
 
 [tool.poetry.group.examples.dependencies]
