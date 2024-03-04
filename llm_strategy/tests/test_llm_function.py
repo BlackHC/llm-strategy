@@ -308,6 +308,22 @@ def test_llm_bound_signature_from_call_generic_collection() -> None:
     assert llm_bound_signature.output_type.schema() == Output[dict[str, str]].schema()
 
 
+def test_llm_bound_signature_from_call_generic_collection_2() -> None:
+    # TODO: I do not like the result but I don't want to implement a full generic type resolution system.
+    T = typing.TypeVar("T")
+
+    def f(llm: BaseLLM, a: list[T]) -> dict[T, T]:
+        """Test docstring."""
+        raise NotImplementedError
+
+    class FInputs(GenericModel, typing.Generic[T]):
+        a: list[T]
+
+    llm_bound_signature = LLMBoundSignature.from_call(f, (), dict(a=["a"]))
+    assert llm_bound_signature.input_type.schema() == FInputs.schema()
+    assert llm_bound_signature.output_type.schema() == Output[dict[T, T]].schema()
+
+
 def test_llm_bound_signature_from_call_generic_function() -> None:
     T = typing.TypeVar("T")
     S = typing.TypeVar("S")
@@ -317,6 +333,18 @@ def test_llm_bound_signature_from_call_generic_function() -> None:
         raise NotImplementedError
 
     llm_bound_signature = LLMBoundSignature.from_call(f, (), dict(a=0, b=""))
+    assert llm_bound_signature.output_type.schema() == Output[dict[int, str]].schema()
+
+
+def test_llm_bound_signature_from_call_generic_function_with_primitive_types() -> None:
+    T = typing.TypeVar("T")
+    S = typing.TypeVar("S")
+
+    def f(llm: BaseLLM, a: T, b: S, c: int) -> dict[T, S]:
+        """Test docstring."""
+        raise NotImplementedError
+
+    llm_bound_signature = LLMBoundSignature.from_call(f, (), dict(a=0, b="", c=10))
     assert llm_bound_signature.output_type.schema() == Output[dict[int, str]].schema()
 
 

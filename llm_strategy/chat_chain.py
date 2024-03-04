@@ -63,7 +63,7 @@ class ChatChain:
         parser: PydanticOutputParser = PydanticOutputParser(pydantic_object=output_model)
         question_and_formatting = question + "\n\n" + parser.get_format_instructions()
 
-        reply_content, chain = self.query(question_and_formatting, **self.enforce_json_response(model_args))
+        reply_content, chain = self.query(question_and_formatting, self.enforce_json_response(model_args))
         parsed_reply: B = typing.cast(B, parser.parse(reply_content))
 
         return parsed_reply, chain

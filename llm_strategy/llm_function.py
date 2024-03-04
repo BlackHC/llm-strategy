@@ -263,7 +263,17 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
         return source_type
 
     @staticmethod
-    def resolve_generic_types(model: type[BaseModel], instance: BaseModel):
+    def resolve_generic_types(model: type[BaseModel], instance: BaseModel) -> dict:
+        """
+        Resolves the generic types of a given model instance and returns a generic type map.
+
+        Args:
+            model (type[BaseModel]): The model type.
+            instance (BaseModel): The instance of the model.
+
+        Returns:
+            dict: The generic type map.
+        """
         generic_type_map: dict = {}
 
         for field_name, attr_value in list(instance):
@@ -281,9 +291,12 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
                 LLMStructuredPrompt.add_resolved_type(generic_type_map, annotation, type(attr_value))
             # if the annotation is a generic type alias ignore
             elif isinstance(annotation, types.GenericAlias):
+                # The generic type alias is not supported yet
+                # The problem is that GenericAlias types are elided: e.g. type(list[str](["hello"])) -> list and not list[str].
+                # But either way, we would need to resolve the types based on the actual elements and their mros.
                 continue
             # if the annotation is a type, check if it is a generic type
-            elif issubclass(annotation, generics.GenericModel):
+            elif isinstance(annotation, type) and issubclass(annotation, generics.GenericModel):
                 # check if the type is in generics._assigned_parameters
                 generic_definition_type_map = LLMStructuredPrompt.get_generic_type_map(annotation)
 
@@ -299,6 +312,9 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
                         continue
                     resolved_type = generic_instance_type_map[generic_parameter]
                     LLMStructuredPrompt.add_resolved_type(generic_type_map, generic_parameter_target, resolved_type)
+            else:
+                # Let Pydantic handle the rest
+                continue
 
         return generic_type_map
 
@@ -319,6 +335,11 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
 
     @staticmethod
     def get_generic_type_map(generic_type, base_generic_type=None):
+        """Build a generic type map for a generic type.
+
+        It maps the generic type variables to the actual types.
+        """
+
         if base_generic_type is None:
             base_generic_type = LLMStructuredPrompt.get_base_generic_type(generic_type)
 
@@ -341,7 +362,19 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
         return generic_parameter_type_map
 
     @staticmethod
-    def get_base_generic_type(field_type) -> type[generics.GenericModel]:
+    def get_base_generic_type(field_type: type) -> type[generics.GenericModel]:
+        """Determine the base generic type of a generic type. E.g. List[str] -> List.
+
+        Args:
+            field_type (type): The generic type.
+
+        Raises:
+            ValueError: If the base generic type cannot be found.
+
+        Returns:
+            type[generics.GenericModel]: The base generic type.
+        """
+
         # get the base class name from annotation (which is without [])
         base_generic_name = field_type.__name__
         if "[" in field_type.__name__:
@@ -535,12 +568,14 @@ class LLMBoundSignature:
         """
 
         # get clean docstring
-        docstring = inspect.getdoc(f)
+        docstring = Hyperparameter("docstring") @ inspect.getdoc(f)
         if docstring is None:
             raise ValueError("The function must have a docstring.")
 
         # get the type of the first argument
-        signature = inspect.signature(f, eval_str=True)
+        globals_from_f = f.__globals__ if hasattr(f, "__globals__") else None
+        locals_from_f = f.__dict__ if hasattr(f, "__dict__") else None
+        signature = inspect.signature(f, eval_str=True, globals=globals_from_f, locals=locals_from_f)
 
         # get all parameters
         parameters_items: list[tuple[str, inspect.Parameter]] = list(signature.parameters.items())
@@ -725,7 +760,7 @@ class LLMFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):
     def explicit(self, language_model_or_chat_chain: BaseLanguageModel | ChatChain, input_object: BaseModel):
         """Call the function with explicit inputs."""
 
-        return self(language_model_or_chat_chain, **dict(input_object))
+        return track_hyperparameters(self)(language_model_or_chat_chain, **dict(input_object))
 
     @trace_calls(kind=TraceNodeKind.CHAIN, capture_return=slicer[1:], capture_args=True)
     def __call__(

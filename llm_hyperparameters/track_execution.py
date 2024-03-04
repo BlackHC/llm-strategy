@@ -1,5 +1,5 @@
 import typing
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from langchain.schema import BaseMessage, ChatMessage, ChatResult, LLMResult
 from langchain_core.language_models import BaseChatModel, BaseLanguageModel, BaseLLM
@@ -149,6 +149,9 @@ class TrackedChatModel(BaseChatModel):
     def _llm_type(self) -> str:
         return self.chat_model._llm_type
 
+    def dict(self, **kwargs: Any) -> Dict:
+        return self.chat_model.dict(**kwargs)
+
     @trace_calls(name="TrackedChatModel", kind=TraceNodeKind.LLM, capture_args=True, capture_return=True)
     def invoke(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> BaseMessage:
         response_message = self.chat_model.invoke(messages, stop, **kwargs)
@@ -193,7 +196,8 @@ def get_tracked_chats(chat_model_or_chat_chain: ChatChain | TrackedChatModel) ->
         model = chat_model_or_chat_chain
     else:
         raise ValueError(f"Unknown language model type {type(chat_model_or_chat_chain)}")
-    return model.tracked_chats.build_compact_dict()["children"]
+    assert isinstance(model, TrackedChatModel)
+    return model.tracked_chats.build_compact_dict()
 
 
 @trace_object_converter.register_converter()
