@@ -33,8 +33,17 @@ clean-build: ## clean build artifacts
 .PHONY: publish
 publish: ## publish a release to pypi.
 	@echo "🚀 Publishing: Dry run."
-	@poetry config pypi-token.pypi $(PYPI_TOKEN)
-	@poetry publish --dry-run
+	@echo "🚀 Configuring pypi token."
+	@PYPI_TOKEN=$$(grep -A 1 pypi ~/.pypirc | tail -n 1 | awk '{print $$3}'); \
+	if [ -z "$$PYPI_TOKEN" ]; then \
+		echo "🚀 No PYPI_TOKEN found in ~/.pypirc"; \
+		exit 1; \
+	else \
+		echo "🚀 Found PYPI_TOKEN in ~/.pypirc"; \
+	fi; \
+	poetry config pypi-token.pypi $$PYPI_TOKEN;
+	@echo "🚀 Publishing dry run."
+	poetry publish --dry-run
 	@echo "🚀 Publishing."
 	@poetry publish
 
