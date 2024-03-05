@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Generic, TypeVar
 
 import langchain
+import wandb
 from langchain.cache import SQLiteCache
 from langchain.chat_models import ChatOpenAI
 from langchain.chat_models.base import BaseChatModel
@@ -15,8 +16,9 @@ from llmtracer import JsonFileWriter, TraceViewerIntegration, wandb_tracer
 from openai import OpenAIError
 from pydantic import BaseModel, Field
 from pydantic.generics import GenericModel
+from rich.console import Console
+from rich.traceback import install
 
-import wandb
 from llm_hyperparameters.track_execution import (
     LangchainInterface,
     TrackedChatModel,
@@ -30,6 +32,9 @@ from llm_hyperparameters.track_hyperparameters import (
 )
 from llm_strategy.chat_chain import ChatChain
 from llm_strategy.llm_function import LLMFunction, llm_explicit_function, llm_function
+
+install(show_locals=True, width=190, console=Console(width=190, color_system="truecolor", stderr=True))
+
 
 langchain.llm_cache = SQLiteCache(".optimization_unit.langchain.db")
 
@@ -69,7 +74,7 @@ class TaskRun(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperpara
     return_value: T_TaskResults | None = Field(
         ..., description="The results of the task. (None for exceptions/failure.)"
     )
-    exception: str | None = Field(..., description="Exception that occurred during the task execution.")
+    exception: list[str] | str | None = Field(..., description="Exception that occurred during the task execution.")
 
 
 class TaskReflection(BaseModel):
@@ -407,6 +412,7 @@ event_handlers = [
     JsonFileWriter(get_json_trace_filename("optimization_unit_trace")),
     TraceViewerIntegration(),
 ]
+
 
 with wandb_tracer(
     "BBO",

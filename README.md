@@ -17,7 +17,201 @@ It uses the doc strings, type annotations, and method/function names as prompts 
 - **Github repository**: <https://github.com/blackhc/llm-strategy/>
 - **Documentation** <https://blackhc.github.io/llm-strategy/>
 
-## Example
+## Research Example
+
+The latest version also includes a package for hyperparameter tracking and collecting traces from LLMs.
+
+This for example allows for meta optimization. See examples/research for a simple implementation using Generics.
+
+You can find an example WandB trace at: https://wandb.ai/blackhc/blackboard-pagi/reports/Meta-Optimization-Example-Trace--Vmlldzo3MDMxODEz?accessToken=p9hubfskmq1z5yj1uz7wx1idh304diiernp7pjlrjrybpaozlwv3dnitjt7vni1j
+
+The prompts showing off the pattern using Generics are straightforward:
+```python
+T_TaskParameters = TypeVar("T_TaskParameters")
+T_TaskResults = TypeVar("T_TaskResults")
+T_Hyperparameters = TypeVar("T_Hyperparameters")
+
+
+class TaskRun(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
+    """
+    The task run. This is the 'data' we use to optimize the hyperparameters.
+    """
+
+    task_parameters: T_TaskParameters = Field(..., description="The task parameters.")
+    hyperparameters: T_Hyperparameters = Field(
+        ...,
+        description="The hyperparameters used for the task. We optimize these.",
+    )
+    all_chat_chains: dict = Field(..., description="The chat chains from the task execution.")
+    return_value: T_TaskResults | None = Field(
+        ..., description="The results of the task. (None for exceptions/failure.)"
+    )
+    exception: list[str] | str | None = Field(..., description="Exception that occurred during the task execution.")
+
+
+class TaskReflection(BaseModel):
+    """
+    The reflections on the task.
+
+    This contains the lessons we learn from each task run to come up with better
+    hyperparameters to try.
+    """
+
+    feedback: str = Field(
+        ...,
+        description=(
+            "Only look at the final results field. Does its content satisfy the "
+            "task description and task parameters? Does it contain all the relevant "
+            "information from the all_chains and all_prompts fields? What could be improved "
+            "in the results?"
+        ),
+    )
+    evaluation: str = Field(
+        ...,
+        description=(
+            "The evaluation of the outputs given the task. Is the output satisfying? What is wrong? What is missing?"
+        ),
+    )
+    hyperparameter_suggestion: str = Field(
+        ...,
+        description="How we want to change the hyperparameters to improve the results. What could we try to change?",
+    )
+    hyperparameter_missing: str = Field(
+        ...,
+        description=(
+            "What hyperparameters are missing to improve the results? What could "
+            "be changed that is not exposed via hyperparameters?"
+        ),
+    )
+
+
+class TaskInfo(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
+    """
+    The task run and the reflection on the experiment.
+    """
+
+    task_parameters: T_TaskParameters = Field(..., description="The task parameters.")
+    hyperparameters: T_Hyperparameters = Field(
+        ...,
+        description="The hyperparameters used for the task. We optimize these.",
+    )
+    reflection: TaskReflection = Field(..., description="The reflection on the task.")
+
+
+class OptimizationInfo(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
+    """
+    The optimization information. This is the data we use to optimize the
+    hyperparameters.
+    """
+
+    older_task_summary: str | None = Field(
+        None,
+        description=(
+            "A summary of previous experiments and the proposed changes with "
+            "the goal of avoiding trying the same changes repeatedly."
+        ),
+    )
+    task_infos: list[TaskInfo[T_TaskParameters, T_TaskResults, T_Hyperparameters]] = Field(
+        ..., description="The most recent tasks we have run and our reflections on them."
+    )
+    best_hyperparameters: T_Hyperparameters = Field(..., description="The best hyperparameters we have found so far.")
+
+
+class OptimizationStep(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
+    """
+    The next optimization steps. New hyperparameters we want to try experiments and new
+    task parameters we want to evaluate on given the previous experiments.
+    """
+
+    best_hyperparameters: T_Hyperparameters = Field(
+        ...,
+        description="The best hyperparameters we have found so far given task_infos and history.",
+    )
+    suggestion: str = Field(
+        ...,
+        description=(
+            "The suggestions for the next experiments. What could we try to "
+            "change? We will try several tasks next and several sets of hyperparameters. "
+            "Let's think step by step."
+        ),
+    )
+    task_parameters_suggestions: list[T_TaskParameters] = Field(
+        ...,
+        description="The task parameters we want to try next.",
+        hint_min_items=1,
+        hint_max_items=4,
+    )
+    hyperparameter_suggestions: list[T_Hyperparameters] = Field(
+        ...,
+        description="The hyperparameters we want to try next.",
+        hint_min_items=1,
+        hint_max_items=2,
+    )
+
+
+class ImprovementProbability(BaseModel):
+    considerations: list[str] = Field(..., description="The considerations for potential improvements.")
+    probability: float = Field(..., description="The probability of improvement.")
+
+
+class LLMOptimizer:
+    @llm_explicit_function
+    @staticmethod
+    def reflect_on_task_run(
+        language_model,
+        task_run: TaskRun[T_TaskParameters, T_TaskResults, T_Hyperparameters],
+    ) -> TaskReflection:
+        """
+        Reflect on the results given the task parameters and hyperparameters.
+
+        This contains the lessons we learn from each task run to come up with better
+        hyperparameters to try.
+        """
+        raise NotImplementedError()
+
+    @llm_explicit_function
+    @staticmethod
+    def summarize_optimization_info(
+        language_model,
+        optimization_info: OptimizationInfo[T_TaskParameters, T_TaskResults, T_Hyperparameters],
+    ) -> str:
+        """
+        Summarize the optimization info. We want to preserve all relevant knowledge for
+        improving the hyperparameters in the future. All information from previous
+        experiments will be forgotten except for what this summary.
+        """
+        raise NotImplementedError()
+
+    @llm_explicit_function
+    @staticmethod
+    def suggest_next_optimization_step(
+        language_model,
+        optimization_info: OptimizationInfo[T_TaskParameters, T_TaskResults, T_Hyperparameters],
+    ) -> OptimizationStep[T_TaskParameters, T_TaskResults, T_Hyperparameters]:
+        """
+        Suggest the next optimization step.
+        """
+        raise NotImplementedError()
+
+    @llm_explicit_function
+    @staticmethod
+    def probability_for_improvement(
+        language_model,
+        optimization_info: OptimizationInfo[T_TaskParameters, T_TaskResults, T_Hyperparameters],
+    ) -> ImprovementProbability:
+        """
+        Return the probability for improvement (between 0 and 1).
+
+        This is your confidence that your next optimization steps will improve the
+        hyperparameters given the information provided. If you think that the
+        information available is unlikely to lead to better hyperparameters, return 0.
+        If you think that the information available is very likely to lead to better
+        hyperparameters, return 1. Be concise.
+        """
+        raise NotImplementedError()
+```
+
+## Application Example
 
 ```python
 from dataclasses import dataclass
