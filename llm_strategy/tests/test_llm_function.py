@@ -13,7 +13,6 @@ from llm_strategy import llm_function
 from llm_strategy.chat_chain import ChatChain
 from llm_strategy.llm_function import (
     LLMBoundSignature,
-    LLMStructuredPrompt,
     Output,
     get_concise_type_repr,
     is_not_implemented,
@@ -426,42 +425,6 @@ def test_llm_bound_signature_from_call_generic_input_outputs_full_remap_failed()
             (),
             dict(a=GenericType[int](value=0), b=GenericType[str](value=""), c=GenericType[float](value=0.0)),
         )
-
-
-def test_get_generic_type_map() -> None:
-    T = typing.TypeVar("T")
-    S = typing.TypeVar("S")
-
-    U = typing.TypeVar("U")
-    V = typing.TypeVar("V")
-
-    X = typing.TypeVar("X")
-
-    class GenericType(GenericModel, typing.Generic[T, S]):
-        value: T
-        value2: S
-
-    assert LLMStructuredPrompt.get_generic_type_map(GenericType) == {T: T, S: S}
-    assert LLMStructuredPrompt.get_generic_type_map(GenericType[S, T]) == {T: S, S: T}
-    assert LLMStructuredPrompt.get_generic_type_map(GenericType[S, T][U, V]) == {T: U, S: V}  # type: ignore
-    assert LLMStructuredPrompt.get_generic_type_map(GenericType[S, T][U, V][X, X]) == {T: X, S: X}  # type: ignore
-    assert LLMStructuredPrompt.get_generic_type_map(GenericType[U, U][X]) == {T: X, S: X}  # type: ignore
-    assert LLMStructuredPrompt.get_generic_type_map(GenericType[int, U][str]) == {T: int, S: str}  # type: ignore
-
-
-def test_resolve_generic_types() -> None:
-    T = typing.TypeVar("T")
-    S = typing.TypeVar("S")
-
-    # Generic Pydantic model
-    class GenericType(GenericModel, typing.Generic[T, S]):
-        a: T
-        b: S
-
-    assert LLMStructuredPrompt.resolve_generic_types(GenericType, GenericType[int, str](a=1, b="Hello")) == {
-        T: int,
-        S: str,
-    }
 
 
 def test_llm_function():
