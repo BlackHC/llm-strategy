@@ -282,7 +282,7 @@ class MockCustomerDatabase(CustomerDatabase):
         raise NotImplementedError()
 ```
 
-See [examples/customer_database_search.py](examples/customer_database_search.py) for a full example.
+See [examples/mock_app/customer_database_search.py](examples/mock_app/customer_database_search.py) for a full example.
 
 ![Customer Database Viewer](examples/mock_app/app.svg)
 
