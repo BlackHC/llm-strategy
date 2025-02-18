@@ -1,13 +1,13 @@
 """
 Spike for a meta-loop that optimizes the prompt templates we use.
 """
+
 # flake8: noqa
 import traceback
 from datetime import datetime
 from typing import Generic, TypeVar
 
 import langchain
-import wandb
 from langchain.cache import SQLiteCache
 from langchain.chat_models import ChatOpenAI
 from langchain.chat_models.base import BaseChatModel
@@ -19,6 +19,7 @@ from pydantic.generics import GenericModel
 from rich.console import Console
 from rich.traceback import install
 
+import wandb
 from llm_hyperparameters.track_execution import (
     LangchainInterface,
     TrackedChatModel,
@@ -33,24 +34,26 @@ from llm_hyperparameters.track_hyperparameters import (
 from llm_strategy.chat_chain import ChatChain
 from llm_strategy.llm_function import LLMFunction, llm_explicit_function, llm_function
 
-install(show_locals=True, width=190, console=Console(width=190, color_system="truecolor", stderr=True))
+install(
+    show_locals=True,
+    width=190,
+    console=Console(width=190, color_system="truecolor", stderr=True),
+)
 
 
 langchain.llm_cache = SQLiteCache(".optimization_unit.langchain.db")
 
 chat_model = ChatOpenAI(
-    model_name="gpt-4-0125-preview",
+    model_name="o3-mini-2025-01-31",
     request_timeout=500,
-    max_tokens=4096,
-    temperature=0.5,
+    max_completion_tokens=4096,
 )
 chat_model = TrackedChatModel(chat_model=chat_model)
 
 simpler_chat_model = ChatOpenAI(
-    model_name="gpt-3.5-turbo-1106",
+    model_name="gpt-4o-2024-11-20",
     request_timeout=240,
-    max_tokens=2048,
-    temperature=0.5,
+    max_completion_tokens=2048,
 )
 simple_chat_model = TrackedChatModel(chat_model=simpler_chat_model)
 # %%
@@ -140,7 +143,8 @@ class OptimizationInfo(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_
         ),
     )
     task_infos: list[TaskInfo[T_TaskParameters, T_TaskResults, T_Hyperparameters]] = Field(
-        ..., description="The most recent tasks we have run and our reflections on them."
+        ...,
+        description="The most recent tasks we have run and our reflections on them.",
     )
     best_hyperparameters: T_Hyperparameters = Field(..., description="The best hyperparameters we have found so far.")
 
@@ -264,7 +268,7 @@ def capture_task_run(
     print(return_value)
 
     all_chat_chains = get_tracked_chats(tracked_chat_model)
-    return TaskRun[structured_prompt.input_type, structured_prompt.return_annotation, type(scope.hyperparameters)](
+    return TaskRun[structured_prompt.input_type, structured_prompt.return_annotation, type(scope.hyperparameters),](
         task_parameters=task_parameters,
         hyperparameters=scope.hyperparameters,
         all_chat_chains=all_chat_chains,

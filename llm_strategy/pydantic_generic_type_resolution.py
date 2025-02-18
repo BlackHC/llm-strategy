@@ -26,13 +26,15 @@ class PydanticGenericTypeMap(dict[typing.TypeVar, typing.Type]):
             # this avoids a bug that is caused by generics.GenericModel.__parameterized_bases_
             if base_class.__module__ == "pydantic.generics":
                 continue
-            if issubclass(base_class, base_generic_type):
-                if base_class in generics._assigned_parameters:
-                    assignment = generics._assigned_parameters[base_class]
-                    generic_parameter_type_map = {
-                        old_generic_type: generic_parameter_type_map.get(new_generic_type, new_generic_type)
-                        for old_generic_type, new_generic_type in assignment.items()
-                    }
+            if not issubclass(base_class, base_generic_type):
+                break
+            if base_class not in generics._assigned_parameters:
+                break
+            assignment = generics._assigned_parameters[base_class]
+            generic_parameter_type_map = {
+                old_generic_type: generic_parameter_type_map.get(new_generic_type, new_generic_type)
+                for old_generic_type, new_generic_type in assignment.items()
+            }
 
         return PydanticGenericTypeMap(generic_parameter_type_map)
 
@@ -92,13 +94,14 @@ class PydanticGenericTypeMap(dict[typing.TypeVar, typing.Type]):
 
         return generic_type_map
 
-    def resolve_type(self, source_type: type) -> type:
+    def resolve_type(self, source_type: type | typing.TypeVar) -> type:
         """
         Resolve a type using the generic type map.
 
         Supports Pydantic.GenericModel and typing.Generic.
         """
         if source_type in self:
+            assert isinstance(source_type, typing.TypeVar)
             source_type = self[source_type]
 
         if isinstance(source_type, type) and issubclass(source_type, generics.GenericModel):
