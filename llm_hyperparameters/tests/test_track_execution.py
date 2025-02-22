@@ -1,5 +1,5 @@
 import pytest
-from langchain.schema import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from llm_hyperparameters.track_execution import TrackedChatModel
 from llm_strategy.chat_chain import ChatChain

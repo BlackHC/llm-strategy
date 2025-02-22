@@ -6,7 +6,7 @@ import typing
 from dataclasses import dataclass
 
 import typing_extensions
-from langchain.llms.base import BaseLLM
+from langchain_core.language_models import BaseLLM
 
 from llm_strategy.llm_function import (
     LLMFunction,

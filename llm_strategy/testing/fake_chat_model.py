@@ -14,28 +14,29 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Any, Collection, Iterable, List, Mapping, Optional
+from typing import Collection, List, Mapping, Optional
 
-from langchain.chat_models.base import BaseChatModel
-from langchain.schema import (
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import (
     AIMessage,
     BaseMessage,
-    ChatResult,
+    message_to_dict,
     messages_from_dict,
     messages_to_dict,
 )
+from langchain_core.outputs import ChatResult
 from pydantic import BaseModel, Field
 
 
-def dict_to_tuple(d: Mapping[Any, Any]) -> tuple[tuple[Any, Any], ...]:
+def to_hashable(d: object) -> object:
     """Convert a dict to a tuple of tuples, sorted by key."""
     # Convert values that are dicts to tuples as well.
-    return tuple(sorted((k, dict_to_tuple(v) if isinstance(v, dict) else v) for k, v in d.items()))
-
-
-def tuple_to_dict(t: Iterable[tuple[Any, Any]]) -> dict[Any, Any]:
-    """Convert a tuple of tuples to a dict."""
-    return {k: tuple_to_dict(v) if isinstance(v, tuple) else v for k, v in t}
+    if isinstance(d, Mapping):
+        return tuple(sorted((k, to_hashable(v)) for k, v in d.items()))
+    elif isinstance(d, (list, set)):
+        return tuple(to_hashable(v) for v in d)
+    else:
+        return d
 
 
 def is_prefix_list(prefix_candidate: Collection, messages: Collection) -> bool:
@@ -65,7 +66,7 @@ class FakeChatModel(BaseChatModel, BaseModel):
     outputs for different calls, for example.)
     """
 
-    messages_tuples_bag: set[tuple] = Field(default_factory=set)
+    messages_tuples_bag: dict[tuple, list[dict]] = Field(default_factory=dict)
     """The texts to return on call."""
     external_chat_model: BaseChatModel | None = None
     """An external LLM to use if the query is not found."""
@@ -75,8 +76,14 @@ class FakeChatModel(BaseChatModel, BaseModel):
         return "fake"
 
     @staticmethod
-    def from_messages(messages_bag: Collection[list[BaseMessage]]) -> "FakeChatModel":
-        messages_tuples_bag = {tuple(dict_to_tuple(m) for m in messages_to_dict(messages)) for messages in messages_bag}
+    def from_messages(
+        messages_bag: Collection[list[BaseMessage | dict]],
+    ) -> "FakeChatModel":
+        """Create a FakeChatModel from a list of messages."""
+        messages_dict_bag = [
+            [message_to_dict(m) if isinstance(m, BaseMessage) else m for m in messages] for messages in messages_bag
+        ]
+        messages_tuples_bag = {tuple(to_hashable(m) for m in messages): messages for messages in messages_dict_bag}
         return FakeChatModel(messages_tuples_bag=messages_tuples_bag)
 
     async def _agenerate(self, messages: list[BaseMessage], stop: list[str] | None = None, **kwargs) -> ChatResult:
@@ -90,33 +97,37 @@ class FakeChatModel(BaseChatModel, BaseModel):
         # constructor call for the next run by hand if needed.
         if self.external_chat_model is not None:
             # Deduplicate the messages (any shared prefixes can be removed)
-            self.messages_tuples_bag = {
+            deduplicated_keys = {
                 messages
                 for messages in self.messages_tuples_bag
                 if not any(is_prefix_list(messages, other) for other in self.messages_tuples_bag if other != messages)
             }
-            print(f"messages_bag = {self.messages_tuples_bag!r}")
+            deduplicated_messages = [self.messages_tuples_bag[key] for key in deduplicated_keys]
+            print(f"messages_bag = {deduplicated_messages!r}")
 
     def invoke(self, messages: list[BaseMessage], stop: list[str] | None = None, **kwargs) -> BaseMessage:
         """Return the query if it exists, else print the code to update the query."""
         assert stop is None, "Stop words are not supported for FakeChatModel."
 
-        messages_tuple = tuple(dict_to_tuple(m) for m in messages_to_dict(messages))
+        messages_tuple = tuple(to_hashable(m) for m in messages_to_dict(messages))
 
-        for cached_messages in self.messages_tuples_bag:
-            if is_prefix_list(messages_tuple, cached_messages):
+        for cached_tuple, cached_messages in self.messages_tuples_bag.items():
+            if is_prefix_list(messages_tuple, cached_tuple):
                 # check that the next message is an AIMessage
-                if len(cached_messages) == len(messages_tuple):
+                if len(cached_tuple) == len(messages_tuple):
                     raise ValueError("No response found in messages_bag.")
-                next_message = messages_from_dict([tuple_to_dict(cached_messages[len(messages)])])[0]
+                next_message = messages_from_dict([cached_messages[len(messages_tuple)]])[0]
                 if not isinstance(next_message, AIMessage):
                     raise ValueError("No response found in messages_bag.")
                 return next_message
 
         if self.external_chat_model is not None:
             message = self.external_chat_model.invoke(messages, stop=stop, **kwargs)
-            message_tuple = dict_to_tuple(messages_to_dict([message])[0])
-            self.messages_tuples_bag.add(tuple(list(messages_tuple) + [message_tuple]))
+            message_tuple = to_hashable(messages_to_dict([message])[0])
+            self.messages_tuples_bag[tuple(list(messages_tuple) + [message_tuple])] = messages_to_dict(
+                list(messages) + [message]
+            )
+
             return message
 
         # If no queries are provided, print the code to update the query

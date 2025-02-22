@@ -11,15 +11,15 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 import pydantic
-import pydantic.schema
 import typing_extensions
-from langchain.chat_models.base import BaseChatModel
-from langchain.schema import OutputParserException
-from langchain_core.language_models import BaseLanguageModel, BaseLLM
+from langchain_core.exceptions import OutputParserException
+from langchain_core.language_models import BaseChatModel, BaseLanguageModel, BaseLLM
 from llmtracer import TraceNodeKind, trace_calls, update_event_properties, update_name
 from llmtracer.trace_builder import slicer
 from pydantic import BaseModel, ValidationError, create_model
-from pydantic.fields import FieldInfo, Undefined
+from pydantic._internal._generics import get_origin
+from pydantic.fields import FieldInfo, PydanticUndefined
+from pydantic.type_adapter import TypeAdapter
 
 from llm_hyperparameters.track_hyperparameters import (
     Hyperparameter,
@@ -145,8 +145,11 @@ class TyperWrapper(str):
         return v.__qualname__
 
 
-class Output(pydantic.generics.GenericModel, typing.Generic[T]):
+class Output(BaseModel, typing.Generic[T]):
     return_value: T
+
+
+DEFAULT_JSON_SCHEMA = pydantic.json_schema.GenerateJsonSchema()
 
 
 @dataclass
@@ -164,7 +167,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
 
     @staticmethod
     def extract_from_definitions(definitions: dict, type_: type) -> dict:
-        normalized_name = pydantic.schema.normalize_name(type_.__name__)
+        normalized_name = DEFAULT_JSON_SCHEMA.normalize_name(type_.__name__)
 
         sub_schema = definitions[normalized_name]
         del definitions[normalized_name]
@@ -172,8 +175,9 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
         return sub_schema
 
     def get_json_schema(self, exclude_default: bool = True) -> dict:
-        schema = pydantic.schema.schema([self.input_type, self.output_type], ref_template="{model}")
-        definitions: dict = deepcopy(schema["definitions"])
+        type_adapter = TypeAdapter(tuple[self.input_type, self.output_type])
+        schema = type_adapter.json_schema(ref_template="{model}")
+        definitions: dict = deepcopy(schema["$defs"])
         # remove title and type from each sub dict in the definitions
         for value in definitions.values():
             value.pop("title")
@@ -200,7 +204,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
 
         # determine the return type
         # the return type can be a type annotation or an Annotated type with annotation being a FieldInfo
-        if typing.get_origin(return_annotation) is typing.Annotated:
+        if get_origin(return_annotation) is typing.Annotated:
             return_info = typing.get_args(return_annotation)
         else:
             return_info = (return_annotation, ...)
@@ -214,7 +218,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
 
         return_info = (return_type, return_info[1])
 
-        if typing.get_origin(return_annotation) is typing.Annotated:
+        if get_origin(return_annotation) is typing.Annotated:
             assert hasattr(return_annotation, "copy_with")
             resolved_return_annotation = return_annotation.copy_with([return_info[0]])
         else:
@@ -234,7 +238,12 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
             input=input,
         )
 
-    @trace_calls(name="LLMStructuredPrompt", kind=TraceNodeKind.CHAIN, capture_args=False, capture_return=False)
+    @trace_calls(
+        name="LLMStructuredPrompt",
+        kind=TraceNodeKind.CHAIN,
+        capture_args=False,
+        capture_return=False,
+    )
     def __call__(
         self,
         language_model_or_chat_chain: BaseLanguageModel | ChatChain,
@@ -299,7 +308,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
             optional_additional_definitions_prompt=optional_additional_definitions_prompt,
             input_schema=json.dumps(schema["input_schema"], **json_dumps_kwargs),
             output_schema=json.dumps(schema["output_schema"], **json_dumps_kwargs),
-            inputs=self.input.json(**json_dumps_kwargs),
+            inputs=self.input.model_dump_json(**json_dumps_kwargs),
         )
 
         # get the response
@@ -320,13 +329,16 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
                     break
                 except OutputParserException as e:
                     prompt = (
-                        Hyperparameter("error_prompt") @ "Tried to parse your output but failed:\n\n"
+                        prompt
+                        + Hyperparameter("output_prompt") @ "\n\nReceived the output\n\n"
+                        + output
+                        + Hyperparameter("error_prompt") @ "Tried to parse your output but failed:\n\n"
                         + str(e)
                         + Hyperparameter("retry_prompt") @ "\n\nPlease try again and avoid this issue."
                     )
             else:
                 exception = OutputParserException(f"Failed to parse the output after {num_retries} retries.")
-                exception.add_note(chain)
+                exception.add_note(repr(chain))
                 raise exception
         elif isinstance(language_model_or_chat_chain, BaseLLM):
             model: BaseChatModel = language_model_or_chat_chain
@@ -464,8 +476,13 @@ class LLMBoundSignature:
 
         model_spec = LLMBoundSignature.field_tuples_to_model_spec(parameter_dict)
         if generic_parameters:
-            bases = (pydantic.generics.GenericModel, typing.Generic[*generic_parameters])
-            input_type = create_model(f"{class_name}Inputs", __base__=bases, __module__=f.__module__, **model_spec)
+            bases = (BaseModel, typing.Generic[*generic_parameters])
+            input_type = create_model(
+                f"{class_name}Inputs",
+                __base__=bases,
+                __module__=f.__module__,
+                **model_spec,
+            )
         else:
             input_type = create_model(f"{class_name}Inputs", __module__=f.__module__, **model_spec)
         input_type.update_forward_refs()
@@ -484,7 +501,9 @@ class LLMBoundSignature:
 
         specific_model_spec = LLMBoundSignature.field_tuples_to_model_spec(parameter_dict)
         specific_input_type = create_model(
-            f"Specific{class_name}Inputs", __module__=f.__module__, **specific_model_spec
+            f"Specific{class_name}Inputs",
+            __module__=f.__module__,
+            **specific_model_spec,
         )
         specific_input_type.update_forward_refs()
 
@@ -500,7 +519,9 @@ class LLMBoundSignature:
         return LLMBoundSignature(llm_structured_prompt, signature)
 
     @staticmethod
-    def parameter_items_to_field_tuple(parameters_items: list[tuple[str, inspect.Parameter]]):
+    def parameter_items_to_field_tuple(
+        parameters_items: list[tuple[str, inspect.Parameter]],
+    ):
         """
         Get the parameter definitions for a function call from the parameters and arguments.
         """
@@ -520,7 +541,7 @@ class LLMBoundSignature:
 
     @staticmethod
     def field_tuples_to_model_spec(
-        field_tuples_dict: dict[str, tuple[str, tuple[type, ...]]]
+        field_tuples_dict: dict[str, tuple[str, tuple[type, ...]]],
     ) -> dict[str, tuple[type, object] | object]:
         """
         Get the parameter definitions for a function call from the parameters and arguments.
@@ -540,16 +561,16 @@ class LLMBoundSignature:
 
     @staticmethod
     def get_or_create_pydantic_default(field: FieldInfo):
-        if field.default is not Undefined:
+        if field.default is not PydanticUndefined:
             if field.default is Ellipsis:
                 return inspect.Parameter.empty
             return field.default
         if field.default_factory is not None:
             return field.default_factory()
-        return None
+        return inspect.Parameter.empty
 
     @staticmethod
-    def bind(signature, args, kwargs):
+    def bind(signature: inspect.Signature, args: tuple, kwargs: dict) -> inspect.BoundArguments:
         """
         Bind function taking into account Field definitions and defaults.
 
@@ -603,7 +624,11 @@ class LLMFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):
     def __getattr__(self, item):
         return getattr(self.__wrapped__, item)
 
-    def explicit(self, language_model_or_chat_chain: BaseLanguageModel | ChatChain, input_object: BaseModel):
+    def explicit(
+        self,
+        language_model_or_chat_chain: BaseLanguageModel | ChatChain,
+        input_object: BaseModel,
+    ):
         """Call the function with explicit inputs."""
 
         return track_hyperparameters(self)(language_model_or_chat_chain, **dict(input_object))
@@ -685,7 +710,11 @@ class LLMExplicitFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):
         return getattr(self.__wrapped__, item)
 
     @trace_calls(kind=TraceNodeKind.CHAIN, capture_return=True, capture_args=slicer[1:])
-    def __call__(self, language_model_or_chat_chain: BaseLanguageModel | ChatChain, input: BaseModel) -> T:
+    def __call__(
+        self,
+        language_model_or_chat_chain: BaseLanguageModel | ChatChain,
+        input: BaseModel,
+    ) -> T:
         """Call the function."""
         update_name(self.__name__)
 
@@ -827,12 +856,12 @@ def get_concise_type_repr(return_type: type):
     For generic types, we want to keep the type arguments as well.
 
         <class 'typing.List[typing.Dict[str, int]]'> -> List[Dict[str, int]]
-        <class 'PydanticGenericModel[typing.Dict[str, int]]'> -> PydanticGenericModel[Dict[str, int]]
+        <class 'BaseModel[typing.Dict[str, int]]'> -> BaseModel[Dict[str, int]]
 
     For unspecialized generic types, we want to keep the type arguments as well.
 
-        so for class PydanticGenericModel(Generic[T]): pass:
-            -> PydanticGenericModel[T]
+        so for class BaseModel(Generic[T]): pass:
+            -> BaseModel[T]
     """
     assert isinstance(return_type, type | types.GenericAlias | _typing_GenericAlias | typing.TypeVar), return_type
     name = return_type.__name__

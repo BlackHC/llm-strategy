@@ -1,6 +1,6 @@
 # Add a manual test that makes sure that we can use the json response format for OpenAI
 import openai
-from langchain_community.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 
 from llm_strategy.chat_chain import ChatChain
 

@@ -17,14 +17,9 @@
 from typing import List, Optional
 
 import langchain
-from langchain.chat_models import ChatOpenAI
-from langchain.schema import (
-    AIMessage,
-    BaseMessage,
-    ChatGeneration,
-    ChatResult,
-    Generation,
-)
+from langchain_community.chat_models import ChatOpenAI
+from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.outputs import ChatGeneration, ChatResult, Generation
 
 
 class CachedChatOpenAI(ChatOpenAI):

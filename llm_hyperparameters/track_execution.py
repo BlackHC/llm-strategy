@@ -1,8 +1,9 @@
 import typing
 from typing import Any, Dict, List, Optional
 
-from langchain.schema import BaseMessage, ChatMessage, ChatResult, LLMResult
 from langchain_core.language_models import BaseChatModel, BaseLanguageModel, BaseLLM
+from langchain_core.messages import BaseMessage, ChatMessage
+from langchain_core.outputs import ChatResult, LLMResult
 from llmtracer import TraceNodeKind, trace_calls, trace_object_converter
 from llmtracer.object_converter import ObjectConverter
 from pydantic import BaseModel, Field
@@ -78,7 +79,7 @@ class PromptTree(BaseModel):
 
     @staticmethod
     def create_root():
-        return PromptTree(message=None, children=[])
+        return PromptTree(fragment="", children=[])
 
     def insert(self, text: str) -> "PromptTree":
         node = self
@@ -117,18 +118,21 @@ class PromptTree(BaseModel):
         }
 
 
-class TrackedLLM(BaseLLM):
+class TrackedLLM(BaseLLM, BaseModel):
     llm: BaseLLM
     tracked_prompts: PromptTree = Field(default_factory=PromptTree.create_root)
 
-    @trace_calls(name="TrackedLLM", kind=TraceNodeKind.LLM, capture_args=True, capture_return=True)
+    @trace_calls(
+        name="TrackedLLM",
+        kind=TraceNodeKind.LLM,
+        capture_args=True,
+        capture_return=True,
+    )
     def invoke(self, prompt: str, stop: Optional[List[str]] = None, **kwargs) -> str:
         node = self.tracked_prompts.insert(prompt)
         response = self.llm.invoke(prompt, stop, **kwargs)
         node.insert(response)
         return response
-
-    __call__ = invoke
 
     def _generate(self, prompts: List[str], stop: Optional[List[str]] = None, **kwargs) -> LLMResult:
         raise NotImplementedError()
@@ -141,7 +145,10 @@ class TrackedLLM(BaseLLM):
         return self.llm._llm_type
 
 
-class TrackedChatModel(BaseChatModel):
+TrackedLLM.__call__ = TrackedLLM.invoke
+
+
+class TrackedChatModel(BaseChatModel, BaseModel):
     chat_model: BaseChatModel
     tracked_chats: ChatTree = Field(default_factory=ChatTree.create_root)
 
@@ -152,13 +159,16 @@ class TrackedChatModel(BaseChatModel):
     def dict(self, **kwargs: Any) -> Dict:
         return self.chat_model.dict(**kwargs)
 
-    @trace_calls(name="TrackedChatModel", kind=TraceNodeKind.LLM, capture_args=True, capture_return=True)
+    @trace_calls(
+        name="TrackedChatModel",
+        kind=TraceNodeKind.LLM,
+        capture_args=True,
+        capture_return=True,
+    )
     def invoke(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> BaseMessage:
         response_message = self.chat_model.invoke(messages, stop, **kwargs)
         self.tracked_chats.insert(messages + [response_message])
         return response_message
-
-    __call__ = invoke
 
     def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs) -> ChatResult:
         chat_result = self.chat_model._generate(messages, stop, **kwargs)
@@ -173,6 +183,9 @@ class TrackedChatModel(BaseChatModel):
         for generation in chat_result.generations:
             node.insert([generation.message])
         return chat_result
+
+
+TrackedChatModel.__call__ = TrackedChatModel.invoke
 
 
 def track_langchain(language_model_or_chat_chain: LI) -> LI:

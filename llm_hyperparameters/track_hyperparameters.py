@@ -8,8 +8,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 
 from pydantic import BaseModel, Field, create_model
-from pydantic.fields import FieldInfo, Undefined, UndefinedType
-from pydantic.typing import NoArgAnyCallable
+from pydantic.fields import FieldInfo, PydanticUndefined
 
 from llm_hyperparameters.utils.callable_wrapper import CallableWrapper
 
@@ -23,7 +22,7 @@ P = typing.ParamSpec("P")
 @dataclass
 class HyperparameterDefinition:
     name: str
-    explicit_type: type | UndefinedType
+    explicit_type: type
     field_info: FieldInfo
 
     def __matmul__(self, default: T) -> T:
@@ -40,11 +39,11 @@ class IdentityDefinition:
 
 def Hyperparameter(
     name: str | None = None,
-    default: T = Undefined,  # type: ignore
+    default: T = PydanticUndefined,  # type: ignore
     *,
     description: str | None = None,
-    explicit_type: type[T] = Undefined,  # type: ignore
-    default_factory: NoArgAnyCallable | None = None,
+    explicit_type: type[T] = PydanticUndefined,  # type: ignore
+    default_factory: typing.Callable[[], T] | typing.Callable[[dict[str, typing.Any]], T] | None = None,
     alias: str | None = None,
     title: str | None = None,
     exclude: typing.Union["AbstractSetIntStr", "MappingIntStrAny", typing.Any, None] = None,
@@ -111,7 +110,7 @@ def Hyperparameter(
         # log warning
         warnings.warn(UserWarning(f"Hyperparameter {name or default} defined outside of a tracked function!"))
 
-    if default is Undefined:
+    if default is PydanticUndefined:
         # return a wrapper that supports matmul
         return definition
     else:
@@ -131,7 +130,9 @@ class HyperparameterBuilder:
     def __setitem__(self, key, value):
         self.hyperparameters[key] = value
         if key not in self.hyperparameter_definitions:
-            self.hyperparameter_definitions[key] = HyperparameterDefinition(key, type(value), ...)
+            self.hyperparameter_definitions[key] = HyperparameterDefinition(
+                key, type(value), FieldInfo.from_field(value)
+            )
 
     @staticmethod
     def from_function(f: typing.Callable) -> "HyperparameterBuilder":
@@ -142,8 +143,8 @@ class HyperparameterBuilder:
     @staticmethod
     def from_model(model: BaseModel) -> "HyperparameterBuilder":
         hyperparameter_definitions: dict[str, HyperparameterDefinition] = {
-            name: HyperparameterDefinition(name, field.type_, field.field_info)
-            for name, field in model.__fields__.items()
+            name: HyperparameterDefinition(name, field_info.annotation, field_info)
+            for name, field_info in model.model_fields.items()
         }
         return HyperparameterBuilder(
             model.__module__, model.__class__.__name__, hyperparameter_definitions, dict(model)
@@ -154,7 +155,7 @@ class HyperparameterBuilder:
 
     def get_type(self, name):
         definition = self.hyperparameter_definitions[name]
-        if definition.explicit_type is Undefined:
+        if definition.explicit_type is PydanticUndefined:
             return type(self.hyperparameters.get(name, definition.field_info.default))
         else:
             return definition.explicit_type
@@ -273,13 +274,13 @@ class HyperparametersBuilder:
             module_fields = {}
             for f_qual_name, f_builder in module_hparams.items():
                 model = f_builder.build()
-                module_fields[f_qual_name] = model
+                module_fields[f_qual_name] = (type(model), model)
 
             module_class_name = f"{module_name}Module"
 
             module_model = create_model(module_class_name, __module__=__name__, **module_fields)
 
-            fields[module_name] = module_model()
+            fields[module_name] = (module_model, module_model())
 
         hyperparameter_model = create_model(class_name, __module__=__name__, __base__=Hyperparameters, **fields)
         return hyperparameter_model()

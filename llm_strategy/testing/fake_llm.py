@@ -1,6 +1,6 @@
 from typing import Any, Mapping
 
-from langchain.llms.base import LLM, BaseLLM
+from langchain_core.language_models import LLM, BaseLLM
 from pydantic import BaseModel, Field
 
 

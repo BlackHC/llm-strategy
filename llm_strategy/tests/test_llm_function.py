@@ -4,10 +4,9 @@ import re
 import typing
 
 import pytest
-from langchain.chat_models.base import BaseChatModel
 from langchain.llms import BaseLLM
+from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel, Field, create_model
-from pydantic.generics import GenericModel
 
 from llm_strategy import llm_function
 from llm_strategy.chat_chain import ChatChain
@@ -55,7 +54,7 @@ def test_get_concise_type_repr():
     # generic class
     T = typing.TypeVar("T")
 
-    class B(GenericModel, typing.Generic[T]):
+    class B(BaseModel, typing.Generic[T]):
         pass
 
     assert get_concise_type_repr(B) == "B[T]"
@@ -181,18 +180,31 @@ def test_llm_function_from_call_first_param():
 
 def test_llm_bound_signature_from_call_with_field():
     # Use Pydantic's Field to specify a default value.
-    def f(llm: BaseLLM, a: str, b=Field(3)) -> str:  # noqa: B008
+    def f(llm: BaseLLM, a: str, b: int = Field(3)) -> str:  # noqa: B008
         """Test docstring."""
         raise NotImplementedError
 
     llm_bound_signature = LLMBoundSignature.from_call(f, ("",), {})
 
-    assert llm_bound_signature.input_type.schema() == create_model("FInputs", a=(str, ...), b=(int, 3)).schema()
+    assert (
+        llm_bound_signature.input_type.model_json_schema()
+        == create_model("FInputs", a=(str, ...), b=(int, 3)).model_json_schema()
+    )
 
 
 def test_llm_bound_signature_from_call_with_missing_default():
     # Use Pydantic's Field to specify a description.
-    def f(llm: BaseLLM, a: str, b: int = Field(..., description="test")) -> str:  # noqa: B008
+    def f(llm: BaseLLM, a: str, b: int) -> str:  # noqa: B008
+        """Test docstring."""
+        raise NotImplementedError
+
+    with pytest.raises(TypeError, match=re.escape("missing a required argument: 'b'")):
+        LLMBoundSignature.from_call(f, ("",), {})
+
+
+def test_llm_bound_signature_from_call_with_field_but_missing_default():
+    # Use Pydantic's Field to specify a description.
+    def f(llm: BaseLLM, a: str, b: int = Field(description="test")) -> str:  # noqa: B008
         """Test docstring."""
         raise NotImplementedError
 
@@ -208,7 +220,7 @@ def test_llm_bound_signature_from_call_with_field_description_no_default():
 
     llm_bound_signature = LLMBoundSignature.from_call(f, ("",), dict(b=1))
 
-    assert llm_bound_signature.input_type.schema() == {
+    assert llm_bound_signature.input_type.model_json_schema() == {
         "properties": {
             "a": {"title": "A", "type": "string"},
             "b": {"description": "test", "title": "B", "type": "integer"},
@@ -252,18 +264,18 @@ def test_llm_bound_signature_from_call_no_parameter_annotation_but_default():
         """Test docstring."""
         raise NotImplementedError
 
-    llm_bound_signature = LLMBoundSignature.from_call(f, (), {})
-    assert llm_bound_signature.input_type.schema() == create_model("FInputs", a=(int, 1), b=(int, 1)).schema()
+    with pytest.raises(TypeError, match=re.escape("A non-annotated attribute was detected: `a = 1`.")):
+        LLMBoundSignature.from_call(f, (), {})
 
 
 def test_llm_bound_signature_from_call_generic_input_outputs() -> None:
     T = typing.TypeVar("T")
     V = typing.TypeVar("V")
 
-    class GenericType(GenericModel, typing.Generic[T]):
+    class GenericType(BaseModel, typing.Generic[T]):
         value: T
 
-    class GenericType2(GenericModel, typing.Generic[T, V]):
+    class GenericType2(BaseModel, typing.Generic[T, V]):
         value: T
         value2: V
 
@@ -274,7 +286,7 @@ def test_llm_bound_signature_from_call_generic_input_outputs() -> None:
     llm_bound_signature = LLMBoundSignature.from_call(
         f, (), dict(a=GenericType[int](value=0), b=GenericType[str](value=""))
     )
-    assert llm_bound_signature.output_type.schema() == Output[GenericType2[int, str]].schema()
+    assert llm_bound_signature.output_type.model_json_schema() == Output[GenericType2[int, str]].model_json_schema()
 
 
 def test_llm_bound_signature_from_call_specified_generic_parameters() -> None:
@@ -287,8 +299,8 @@ def test_llm_bound_signature_from_call_specified_generic_parameters() -> None:
         b: dict[str, list[str]]
 
     llm_bound_signature = LLMBoundSignature.from_call(f, (), dict(a=["a"], b=dict(t=["b"])))
-    assert llm_bound_signature.input_type.schema() == FInputs.schema()
-    assert llm_bound_signature.output_type.schema() == Output[dict[str, str]].schema()
+    assert llm_bound_signature.input_type.model_json_schema() == FInputs.model_json_schema()
+    assert llm_bound_signature.output_type.model_json_schema() == Output[dict[str, str]].model_json_schema()
 
 
 def test_llm_bound_signature_from_call_generic_collection() -> None:
@@ -298,13 +310,13 @@ def test_llm_bound_signature_from_call_generic_collection() -> None:
         """Test docstring."""
         raise NotImplementedError
 
-    class FInputs(GenericModel, typing.Generic[T]):
+    class FInputs(BaseModel, typing.Generic[T]):
         a: list[T]
         b: T
 
     llm_bound_signature = LLMBoundSignature.from_call(f, (), dict(a=["a"], b="hello"))
-    assert llm_bound_signature.input_type.schema() == FInputs[str].schema()
-    assert llm_bound_signature.output_type.schema() == Output[dict[str, str]].schema()
+    assert llm_bound_signature.input_type.model_json_schema() == FInputs[str].schema()
+    assert llm_bound_signature.output_type.model_json_schema() == Output[dict[str, str]].schema()
 
 
 def test_llm_bound_signature_from_call_generic_collection_2() -> None:
@@ -315,7 +327,7 @@ def test_llm_bound_signature_from_call_generic_collection_2() -> None:
         """Test docstring."""
         raise NotImplementedError
 
-    class FInputs(GenericModel, typing.Generic[T]):
+    class FInputs(BaseModel, typing.Generic[T]):
         a: list[T]
 
     llm_bound_signature = LLMBoundSignature.from_call(f, (), dict(a=["a"]))
@@ -354,10 +366,10 @@ def test_llm_bound_signature_from_call_generic_input_outputs_full_remap() -> Non
     U = typing.TypeVar("U")
     V = typing.TypeVar("V")
 
-    class GenericType(GenericModel, typing.Generic[T]):
+    class GenericType(BaseModel, typing.Generic[T]):
         value: T
 
-    class GenericType2(GenericModel, typing.Generic[T, S]):
+    class GenericType2(BaseModel, typing.Generic[T, S]):
         value: T
         value2: S
 
@@ -366,7 +378,13 @@ def test_llm_bound_signature_from_call_generic_input_outputs_full_remap() -> Non
         raise NotImplementedError
 
     llm_bound_signature = LLMBoundSignature.from_call(
-        f, (), dict(a=GenericType[int](value=0), b=GenericType[str](value=""), c=GenericType[str](value=""))
+        f,
+        (),
+        dict(
+            a=GenericType[int](value=0),
+            b=GenericType[str](value=""),
+            c=GenericType[str](value=""),
+        ),
     )
     assert llm_bound_signature.output_type.schema() == Output[GenericType2[int, str]].schema()
 
@@ -378,12 +396,16 @@ def test_llm_bound_signature_from_call_generic_input_outputs_multiple_remap() ->
     U = typing.TypeVar("U")
     V = typing.TypeVar("V")
 
-    class GenericType(GenericModel, typing.Generic[T, S]):
+    class GenericType(BaseModel, typing.Generic[T, S]):
         value: T | None = None
         value2: S | None = None
 
     def f(
-        llm: BaseLLM, a: GenericType[U, int], b: GenericType[int, V], c: GenericType[V, V], d: GenericType[U, U]
+        llm: BaseLLM,
+        a: GenericType[U, int],
+        b: GenericType[int, V],
+        c: GenericType[V, V],
+        d: GenericType[U, U],
     ) -> GenericType[U, V]:
         """Test docstring."""
         raise NotImplementedError
@@ -392,7 +414,10 @@ def test_llm_bound_signature_from_call_generic_input_outputs_multiple_remap() ->
         f,
         (),
         dict(
-            a=GenericType[int, int](), b=GenericType[int, str](), c=GenericType[str, str](), d=GenericType[int, int]()
+            a=GenericType[int, int](),
+            b=GenericType[int, str](),
+            c=GenericType[str, str](),
+            d=GenericType[int, int](),
         ),
     )
     assert llm_bound_signature.output_type.schema() == Output[GenericType[int, str]].schema()
@@ -405,10 +430,10 @@ def test_llm_bound_signature_from_call_generic_input_outputs_full_remap_failed()
     U = typing.TypeVar("U")
     V = typing.TypeVar("V")
 
-    class GenericType(GenericModel, typing.Generic[T]):
+    class GenericType(BaseModel, typing.Generic[T]):
         value: T
 
-    class GenericType2(GenericModel, typing.Generic[T, S]):
+    class GenericType2(BaseModel, typing.Generic[T, S]):
         value: T
         value2: S
 
@@ -423,7 +448,11 @@ def test_llm_bound_signature_from_call_generic_input_outputs_full_remap_failed()
         LLMBoundSignature.from_call(
             f,
             (),
-            dict(a=GenericType[int](value=0), b=GenericType[str](value=""), c=GenericType[float](value=0.0)),
+            dict(
+                a=GenericType[int](value=0),
+                b=GenericType[str](value=""),
+                c=GenericType[float](value=0.0),
+            ),
         )
 
 
@@ -437,15 +466,15 @@ def test_llm_function():
 
     fake_llm = FakeLLM(
         texts=[
-            "Add two numbers.\n\nThe input and output are formatted as a JSON interface that conforms to the JSON "
-            'schemas below.\n\nAs an example, for the schema {"properties": {"foo": {"description": "a list of '
-            'strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}} the object {"foo": ['
-            '"bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", '
-            '"baz"]}} is not well-formatted.\n\nHere is the input schema:\n```\n{"properties": {"a": {"type": '
-            '"integer"}, "b": {"type": "integer"}}, "required": ["a", "b"]}\n```\n\nHere is the output '
-            'schema:\n```\n{"properties": {"return_value": {"type": "integer"}}, "required": ['
-            '"return_value"]}\n```\nNow output the results for the following inputs:\n```\n{"a": 1, "b": 2}\n```'
-            '{"return_value": 3}'
+            "Add two numbers.\n\nThe input and output are formatted as a JSON interface that conforms to the JSON"
+            ' schemas below.\n\nAs an example, for the schema {"properties": {"foo": {"description": "a list of'
+            ' strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}} the object {"foo":'
+            ' ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar",'
+            ' "baz"]}} is not well-formatted.\n\nHere is the input schema:\n```\n{"properties": {"a": {"type":'
+            ' "integer"}, "b": {"type": "integer"}}, "required": ["a", "b"]}\n```\n\nHere is the output'
+            ' schema:\n```\n{"properties": {"return_value": {"type": "integer"}}, "required":'
+            ' ["return_value"]}\n```\nNow output the results for the following'
+            ' inputs:\n```\n{"a":1,"b":2}\n```{"return_value": 3}'
         ]
     )
 

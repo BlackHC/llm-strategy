@@ -32,7 +32,7 @@ T_TaskResults = TypeVar("T_TaskResults")
 T_Hyperparameters = TypeVar("T_Hyperparameters")
 
 
-class TaskRun(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
+class TaskRun(BaseModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
     """
     The task run. This is the 'data' we use to optimize the hyperparameters.
     """
@@ -85,7 +85,7 @@ class TaskReflection(BaseModel):
     )
 
 
-class TaskInfo(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
+class TaskInfo(BaseModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
     """
     The task run and the reflection on the experiment.
     """
@@ -98,7 +98,7 @@ class TaskInfo(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperpar
     reflection: TaskReflection = Field(..., description="The reflection on the task.")
 
 
-class OptimizationInfo(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
+class OptimizationInfo(BaseModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
     """
     The optimization information. This is the data we use to optimize the
     hyperparameters.
@@ -117,7 +117,7 @@ class OptimizationInfo(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_
     best_hyperparameters: T_Hyperparameters = Field(..., description="The best hyperparameters we have found so far.")
 
 
-class OptimizationStep(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
+class OptimizationStep(BaseModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
     """
     The next optimization steps. New hyperparameters we want to try experiments and new
     task parameters we want to evaluate on given the previous experiments.

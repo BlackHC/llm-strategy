@@ -1,8 +1,9 @@
 from typing import Any, Dict, List, Optional
 
-from langchain.chat_models.base import BaseChatModel
 from langchain.llms import BaseLLM
-from langchain.schema import AIMessage, BaseMessage, ChatMessage, ChatResult, LLMResult
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage, BaseMessage, ChatMessage
+from langchain_core.outputs import ChatResult, LLMResult
 from typing_extensions import override
 
 

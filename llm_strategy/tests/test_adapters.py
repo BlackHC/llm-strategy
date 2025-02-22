@@ -1,4 +1,4 @@
-from langchain.schema import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from llm_strategy import adapters
 from llm_strategy.testing import fake_chat_model, fake_llm

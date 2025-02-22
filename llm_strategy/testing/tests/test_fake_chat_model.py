@@ -15,7 +15,7 @@
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import pytest
-from langchain.schema import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from llm_strategy.testing import fake_chat_model
 
@@ -40,6 +40,6 @@ def test_fake_chat_model_query_with_stop_raise():
 
 def test_chat_model_llm_missing_query():
     """Test that the fake LLM raises an error if the query is missing."""
-    chat_model = fake_chat_model.FakeChatModel(messages_tuples_bag=set())
+    chat_model = fake_chat_model.FakeChatModel(messages_tuples_bag={})
     with pytest.raises(NotImplementedError):
         chat_model([SystemMessage(content="foo"), HumanMessage(content="bar")])

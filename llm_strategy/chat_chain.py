@@ -3,9 +3,9 @@ import typing
 from dataclasses import dataclass
 from typing import Tuple, cast
 
-from langchain.chat_models.base import BaseChatModel
-from langchain.output_parsers import PydanticOutputParser
-from langchain.schema import BaseMessage, HumanMessage
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, create_model
 
 T = typing.TypeVar("T")
