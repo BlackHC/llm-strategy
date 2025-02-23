@@ -6,12 +6,12 @@ from llm_hyperparameters.track_hyperparameters import (
 
 def test_all():
     @track_hyperparameters
-    def f(*, hparams_a: int = 1):
-        return hparams_a
+    def f(*, hparam_a: int = 1):
+        return hparam_a
 
     @track_hyperparameters
-    def g(*, hparams_b: int = 2):
-        return hparams_b
+    def g(*, hparam_b: int = 2):
+        return hparam_b
 
     with Hyperparameters() as hparams:
         assert f() == 1
@@ -26,16 +26,16 @@ def test_all():
 
 def test_no_scope():
     @track_hyperparameters
-    def f(hparams_a: int = 1):
-        return hparams_a
+    def f(hparam_a: int = 1):
+        return hparam_a
 
     assert f() == 1
 
 
 def test_manual():
     @track_hyperparameters
-    def f(hparams_a: int = 1):
-        return hparams_a
+    def f(hparam_a: int = 1):
+        return hparam_a
 
     with Hyperparameters() as hparams:
         assert f() == 1
@@ -46,12 +46,12 @@ def test_manual():
         assert f() == 2
 
     @track_hyperparameters
-    def g(hparams_a: str = "Hello", hparams_b: str = "Hello"):
-        return hparams_a + hparams_b
+    def g(hparam_a: str = "Hello", hparam_b: str = "Hello"):
+        return hparam_a + hparam_b
 
     with Hyperparameters() as hparams:
         assert g() == "HelloHello"
-        assert g(hparams_b="World") == "HelloWorld"
+        assert g(hparam_b="World") == "HelloWorld"
 
     hparams[g].b = "World"
 
@@ -61,14 +61,14 @@ def test_manual():
 
 def test_nested():
     @track_hyperparameters
-    def f(hparams_a: int = 1, hparams_b: int = 2):
-        return hparams_a + hparams_b
+    def f(hparam_a: int = 1, hparam_b: int = 2):
+        return hparam_a + hparam_b
 
     assert f() == 3
 
     @track_hyperparameters
-    def g(hparams_c: int = 3):
-        return hparams_c + f()
+    def g(hparam_c: int = 3):
+        return hparam_c + f()
 
     with Hyperparameters() as hparams:
         assert g() == 6

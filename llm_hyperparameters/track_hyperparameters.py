@@ -69,6 +69,8 @@ class Hyperparameters(dict[str, typing.Any], ContextDecorator):
 
 _hyperparameters_stack: list[Hyperparameters] = []
 
+PARAM_PREFIX = "hparam_"
+
 
 @dataclass
 class TrackedFunction(CallableWrapper, typing.Callable[P, T], typing.Generic[P, T]):  # type: ignore
@@ -84,9 +86,9 @@ class TrackedFunction(CallableWrapper, typing.Callable[P, T], typing.Generic[P, 
         # Get signature and extract hyperparameter args
         sig = inspect.signature(f)
         field_definitions = {
-            name.removeprefix("hparams_"): (param.annotation, param.default)
+            name.removeprefix(PARAM_PREFIX): (param.annotation, param.default)
             for name, param in sig.parameters.items()
-            if name.startswith("hparams_")
+            if name.startswith(PARAM_PREFIX)
         }
         # Verify that all hyperparameters have an explicit value
         for name, (annotation, default) in field_definitions.items():
@@ -117,7 +119,7 @@ class TrackedFunction(CallableWrapper, typing.Callable[P, T], typing.Generic[P, 
             else:
                 hparams = self.hparams_model_type()
                 _hyperparameters_stack[-1][self.__wrapped__] = hparams
-            updated_kwargs = {"hparams_" + k: v for k, v in hparams.model_dump().items()}
+            updated_kwargs = {PARAM_PREFIX + k: v for k, v in hparams.model_dump().items()}
             updated_kwargs.update(kwargs)
             return self.__wrapped__(*args, **updated_kwargs)
 
