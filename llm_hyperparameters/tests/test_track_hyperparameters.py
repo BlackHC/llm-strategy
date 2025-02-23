@@ -1,113 +1,84 @@
-import pytest
-
 from llm_hyperparameters.track_hyperparameters import (
-    Hyperparameter,
-    hyperparameters_scope,
+    Hyperparameters,
     track_hyperparameters,
 )
 
 
 def test_all():
     @track_hyperparameters
-    def f():
-        return Hyperparameter() @ 1
+    def f(*, hparams_a: int = 1):
+        return hparams_a
 
     @track_hyperparameters
-    def g():
-        return Hyperparameter() @ 2
+    def g(*, hparams_b: int = 2):
+        return hparams_b
 
-    with hyperparameters_scope() as scope:
+    with Hyperparameters() as hparams:
         assert f() == 1
         assert g() == 2
 
-    scope.hyperparameters[f].hparam0 = 3
+    hparams[f].a = 3
 
-    with scope():
+    with hparams:
         assert f() == 3
         assert g() == 2
 
 
 def test_no_scope():
     @track_hyperparameters
-    def f():
-        return Hyperparameter() @ 1
+    def f(hparams_a: int = 1):
+        return hparams_a
 
-    with pytest.warns(UserWarning):
-        assert f() == 1
+    assert f() == 1
 
 
-def test_no_name():
+def test_manual():
     @track_hyperparameters
-    def f():
-        return Hyperparameter() @ 1
+    def f(hparams_a: int = 1):
+        return hparams_a
 
-    with hyperparameters_scope() as scope:
+    with Hyperparameters() as hparams:
         assert f() == 1
 
-    scope.hyperparameters[f].hparam0 = 2
+    hparams[f].a = 2
 
-    with scope():
+    with hparams:
         assert f() == 2
 
     @track_hyperparameters
-    def g():
-        return Hyperparameter() @ "Hello" + Hyperparameter() @ "Hello"
+    def g(hparams_a: str = "Hello", hparams_b: str = "Hello"):
+        return hparams_a + hparams_b
 
-    with hyperparameters_scope() as scope:
+    with Hyperparameters() as hparams:
         assert g() == "HelloHello"
+        assert g(hparams_b="World") == "HelloWorld"
 
-    scope.hyperparameters[g].hparam1 = "World"
+    hparams[g].b = "World"
 
-    with scope():
+    with hparams:
         assert g() == "HelloWorld"
-
-
-def test_with_name():
-    @track_hyperparameters
-    def f():
-        return Hyperparameter("hello") @ 1
-
-    with hyperparameters_scope() as scope:
-        assert f() == 1
-
-    scope.hyperparameters[f].hello = 2
-
-    with scope():
-        assert f() == 2
-
-    @track_hyperparameters
-    def g():
-        return Hyperparameter("hello") @ "Hello" + Hyperparameter("hello") @ "Hello"
-
-    with hyperparameters_scope() as scope:
-        assert g() == "HelloHello"
-
-    scope.hyperparameters[g].hello = "World"
-
-    with scope():
-        assert g() == "WorldWorld"
 
 
 def test_nested():
     @track_hyperparameters
-    def f():
-        return Hyperparameter("hello") @ 1 + Hyperparameter("world") @ 2
+    def f(hparams_a: int = 1, hparams_b: int = 2):
+        return hparams_a + hparams_b
 
     assert f() == 3
 
     @track_hyperparameters
-    def g():
-        return Hyperparameter("hello") @ 3 + f()
+    def g(hparams_c: int = 3):
+        return hparams_c + f()
 
-    with hyperparameters_scope() as scope:
+    with Hyperparameters() as hparams:
         assert g() == 6
 
-    scope.hyperparameters[g].hello = 4
+    hparams[g].c = 4
 
-    with scope():
+    with hparams:
         assert g() == 7
 
-    scope.hyperparameters[f].hello = 5
+    hparams[f].a = 5
 
-    with scope():
+    with hparams:
         assert g() == 11
