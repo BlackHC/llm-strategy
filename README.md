@@ -282,13 +282,13 @@ class MockCustomerDatabase(CustomerDatabase):
         raise NotImplementedError()
 ```
 
-See [examples/customer_database_search.py](examples/customer_database_search.py) for a full example.
+See [examples/mock_app/customer_database_search.py](examples/mock_app/customer_database_search.py) for a full example.
 
-![Customer Database Viewer](examples/app.svg)
+![Customer Database Viewer](examples/mock_app/app.svg)
 
-![Searching for a Customer](examples/search1.svg)
+![Searching for a Customer](examples/mock_app/search1.svg)
 
-![Searching for a Customer](examples/search2.svg)
+![Searching for a Customer](examples/mock_app/search2.svg)
 
 ## Getting started with contributing
 
@@ -312,7 +312,7 @@ To enable the code coverage reports, see [here](https://fpgmaas.github.io/cookie
 
 - Create an API Token on [Pypi](https://pypi.org/).
 - Add the API Token to your projects secrets with the name `PYPI_TOKEN` by visiting 
-[this page](https://github.com/blackhc/llm-strategy/settings/secrets/actions/new).
+[this page](https://github.com/blackhc/llm-strategy/settings/secrets/mock_app/actions/new).
 - Create a [new release](https://github.com/blackhc/llm-strategy/releases/new) on Github. 
 Create a new tag in the form ``*.*.*``.
 
