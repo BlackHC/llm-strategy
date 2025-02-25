@@ -1,5 +1,5 @@
 from llm_hyperparameters.track_hyperparameters import (
-    Hyperparameters,
+    HyperparameterScope,
     track_hyperparameters,
 )
 
@@ -13,7 +13,7 @@ def test_all():
     def g(*, hparam_b: int = 2):
         return hparam_b
 
-    with Hyperparameters() as hparams:
+    with HyperparameterScope() as hparams:
         assert f() == 1
         assert g() == 2
 
@@ -37,7 +37,7 @@ def test_manual():
     def f(hparam_a: int = 1):
         return hparam_a
 
-    with Hyperparameters() as hparams:
+    with HyperparameterScope() as hparams:
         assert f() == 1
 
     hparams[f].a = 2
@@ -49,7 +49,7 @@ def test_manual():
     def g(hparam_a: str = "Hello", hparam_b: str = "Hello"):
         return hparam_a + hparam_b
 
-    with Hyperparameters() as hparams:
+    with HyperparameterScope() as hparams:
         assert g() == "HelloHello"
         assert g(hparam_b="World") == "HelloWorld"
 
@@ -70,7 +70,7 @@ def test_nested():
     def g(hparam_c: int = 3):
         return hparam_c + f()
 
-    with Hyperparameters() as hparams:
+    with HyperparameterScope() as hparams:
         assert g() == 6
 
     hparams[g].c = 4
@@ -81,4 +81,30 @@ def test_nested():
     hparams[f].a = 5
 
     with hparams:
+        assert g() == 11
+
+
+def test_serialization():
+    @track_hyperparameters
+    def f(hparam_a: int = 1, hparam_b: int = 2):
+        return hparam_a + hparam_b
+
+    @track_hyperparameters
+    def g(hparam_c: int = 3):
+        return hparam_c + f()
+
+    with HyperparameterScope() as hparams:
+        assert g() == 6
+
+    hparams[g].c = 4
+    hparams[f].a = 5
+
+    specific_hparams = hparams.freeze()
+    serialized = specific_hparams.model_dump_json()
+
+    new_specific_hparams = specific_hparams.model_validate_json(serialized)
+    print(new_specific_hparams)
+    # Verify the deserialized hyperparameters work the same
+    with HyperparameterScope(new_specific_hparams) as scope:
+        print(scope)
         assert g() == 11

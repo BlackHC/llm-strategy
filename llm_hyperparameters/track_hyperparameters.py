@@ -6,7 +6,8 @@ from contextlib import ContextDecorator
 from dataclasses import dataclass
 from typing import Callable
 
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, Field, RootModel, create_model
+from typing_extensions import TypedDict
 
 from llm_hyperparameters.utils.callable_wrapper import CallableWrapper
 
@@ -14,7 +15,21 @@ T = typing.TypeVar("T")
 P = typing.ParamSpec("P")
 
 
-class Hyperparameters(dict[str, typing.Any], ContextDecorator):
+class Hyperparameters(typing.Mapping[str, typing.Any]):
+    pass
+
+
+class HyperparameterScope(dict[Callable | str, typing.Any], ContextDecorator):
+    """
+    A context manager that allows tracking and overriding hyperparameters for decorated functions.
+
+    This class acts as both a dictionary mapping function names to their hyperparameters,
+    and a context manager that establishes a scope where those hyperparameter values are active.
+
+    Functions decorated with @track_hyperparameters can have their hyperparameters (parameters
+    prefixed with `hparam_`) modified within the context of a HyperparameterScope instance.
+    """
+
     @staticmethod
     def convert_module_name(module_name: str):
         # replace . with _ and remove prefix "__"
@@ -31,31 +46,31 @@ class Hyperparameters(dict[str, typing.Any], ContextDecorator):
 
     @staticmethod
     def convert_callable_to_name(f: Callable) -> str:
-        module_escaped_name = Hyperparameters.convert_module_name(f.__module__)
-        f_escaped_name = Hyperparameters.convert_function_name(f.__qualname__)
+        module_escaped_name = HyperparameterScope.convert_module_name(f.__module__)
+        f_escaped_name = HyperparameterScope.convert_function_name(f.__qualname__)
         return f"{module_escaped_name}.{f_escaped_name}"
 
     def __getitem__(self, key: Callable | str) -> dict[str, typing.Any]:
         if isinstance(key, Callable):
-            return super().__getitem__(Hyperparameters.convert_callable_to_name(key))
+            return super().__getitem__(HyperparameterScope.convert_callable_to_name(key))
         else:
             return super().__getitem__(key)
 
     def __setitem__(self, key: Callable | str, value: typing.Any):
         if isinstance(key, Callable):
-            return super().__setitem__(Hyperparameters.convert_callable_to_name(key), value)
+            return super().__setitem__(HyperparameterScope.convert_callable_to_name(key), value)
         else:
             return super().__setitem__(key, value)
 
     def __contains__(self, key: object) -> bool:
         if isinstance(key, Callable):
-            return super().__contains__(Hyperparameters.convert_callable_to_name(key))
+            return super().__contains__(HyperparameterScope.convert_callable_to_name(key))
         else:
             return super().__contains__(key)
 
     def __delitem__(self, key: str) -> None:
         if isinstance(key, Callable):
-            return super().__delitem__(Hyperparameters.convert_callable_to_name(key))
+            return super().__delitem__(HyperparameterScope.convert_callable_to_name(key))
         else:
             return super().__delitem__(key)
 
@@ -65,6 +80,25 @@ class Hyperparameters(dict[str, typing.Any], ContextDecorator):
 
     def __exit__(self, exc_type, exc_value, traceback):
         _hyperparameters_stack.pop()
+
+    def freeze(self):
+        FrozenHyperparametersDict = TypedDict(
+            "FrozenHyperparametersDict", {k: type(v) for k, v in self.items()}, total=False  # type: ignore
+        )
+
+        class FrozenHyperparameters(RootModel[FrozenHyperparametersDict], typing.Mapping[str, typing.Any]):
+            root: FrozenHyperparametersDict
+
+            def __getitem__(self, key: str) -> typing.Any:
+                return self.root[key]
+
+            def __iter__(self) -> typing.Iterator[str]:
+                return iter(self.root)
+
+            def __len__(self) -> int:
+                return len(self.root)
+
+        return FrozenHyperparameters(self)
 
 
 _hyperparameters_stack: list[Hyperparameters] = []
@@ -85,24 +119,21 @@ class TrackedFunction(CallableWrapper, typing.Callable[P, T], typing.Generic[P, 
     def from_function(f: typing.Callable[P, T]) -> "TrackedFunction[P, T]":
         # Get signature and extract hyperparameter args
         sig = inspect.signature(f)
-        field_definitions = {
-            name.removeprefix(PARAM_PREFIX): (param.annotation, param.default)
-            for name, param in sig.parameters.items()
-            if name.startswith(PARAM_PREFIX)
-        }
-        # Verify that all hyperparameters have an explicit value
-        for name, (annotation, default) in field_definitions.items():
-            if default is inspect.Parameter.empty:
-                raise ValueError(f"Hyperparameter {name} has no explicit value!")
-            if annotation is inspect.Parameter.empty:
-                raise ValueError(f"Hyperparameter {name} has no explicit type!")
+        field_definitions = {}
+        for name, param in sig.parameters.items():
+            if name.startswith(PARAM_PREFIX):
+                if param.default is inspect.Parameter.empty:
+                    raise ValueError(f"Hyperparameter {name} has no explicit value!")
+                if param.annotation is inspect.Parameter.empty:
+                    raise ValueError(f"Hyperparameter {name} has no explicit type!")
+                field_definitions[name.removeprefix(PARAM_PREFIX)] = (param.annotation, Field(default=param.default))
 
         escaped_name = string.capwords(f.__name__, sep="_").replace("_", "")
         class_name = f"{escaped_name}Hyperparameters"
 
         hparams_model_type = create_model(class_name, __module__=f.__module__, **field_definitions)
 
-        tracked_function: TrackedFunction = functools.wraps(f)(
+        tracked_function = functools.wraps(f)(
             TrackedFunction(
                 f,
                 hparams_model_type,
@@ -125,4 +156,23 @@ class TrackedFunction(CallableWrapper, typing.Callable[P, T], typing.Generic[P, 
 
 
 def track_hyperparameters(f: typing.Callable[P, T]) -> typing.Callable[P, T]:
+    """
+    Decorator that enables dynamic hyperparameter tracking and modification for functions.
+
+    Any parameter prefixed with 'hparam_' will be treated as a hyperparameter that can be
+    modified at runtime. Hyperparameters must have explicit type annotations and default values.
+
+    Example:
+        @track_hyperparameters
+        def train_model(*, hparam_learning_rate: float = 0.01, hparam_batch_size: int = 32):
+            ...
+
+        with HyperparameterScope() as hparams:
+            train_model()  # Uses default hyperparameters
+
+        hparams[train_model].learning_rate = 0.001  # Modify learning rate
+
+        with hparams:
+            train_model()  # Uses modified learning rate
+    """
     return TrackedFunction.from_function(f)
