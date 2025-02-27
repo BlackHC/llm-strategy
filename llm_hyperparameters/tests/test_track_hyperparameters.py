@@ -1,3 +1,4 @@
+import llm_hyperparameters.track_hyperparameters
 from llm_hyperparameters.track_hyperparameters import (
     HyperparameterScope,
     track_hyperparameters,
@@ -99,12 +100,10 @@ def test_serialization():
     hparams[g].c = 4
     hparams[f].a = 5
 
-    specific_hparams = hparams.freeze()
+    specific_hparams = llm_hyperparameters.track_hyperparameters.Hyperparameters(hparams)
     serialized = specific_hparams.model_dump_json()
-
     new_specific_hparams = specific_hparams.model_validate_json(serialized)
-    print(new_specific_hparams)
+
     # Verify the deserialized hyperparameters work the same
-    with HyperparameterScope(new_specific_hparams) as scope:
-        print(scope)
+    with HyperparameterScope(new_specific_hparams):
         assert g() == 11
