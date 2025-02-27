@@ -16,7 +16,7 @@ T = typing.TypeVar("T")
 P = typing.ParamSpec("P")
 
 
-class HyperparameterScopeMixin(ContextDecorator, typing.Mapping[Callable | str, typing.Any]):
+class HyperparametersMixin(ContextDecorator, typing.Mapping[Callable | str, typing.Any]):
     root: dict[str, typing.Any]
 
     def __getitem__(self, key: "TrackedFunction | str") -> dict[str, typing.Any]:
@@ -51,7 +51,7 @@ class HyperparameterScopeMixin(ContextDecorator, typing.Mapping[Callable | str, 
         _hyperparameter_scope_stack.pop()
 
 
-class HyperparameterScope(HyperparameterScopeMixin, RootModel[dict[str, typing.Any]]):
+class Hyperparameters(HyperparametersMixin, RootModel[dict[str, typing.Any]]):
     """
     A context manager that allows tracking and overriding hyperparameters for decorated functions.
 
@@ -94,20 +94,20 @@ class HyperparameterScope(HyperparameterScopeMixin, RootModel[dict[str, typing.A
             )
 
             def create_hyperparameters_type(typed_dict_type: type) -> type:
-                class ActualHyperparameterScope(HyperparameterScopeMixin, RootModel[typed_dict_type]):
+                class ActualHyperparameters(HyperparametersMixin, RootModel[typed_dict_type]):
                     root: typed_dict_type = Field(default_factory=dict)
 
-                assert issubclass(ActualHyperparameterScope, ContextDecorator)
-                return ActualHyperparameterScope
+                assert issubclass(ActualHyperparameters, ContextDecorator)
+                return ActualHyperparameters
 
-            _hyperparameters_type = functools.wraps(HyperparameterScope, updated=())(
+            _hyperparameters_type = functools.wraps(Hyperparameters, updated=())(
                 create_hyperparameters_type(_hyperparameters_typed_dict_type)
             )
 
         return _hyperparameters_type(*args, **kwargs)
 
 
-_hyperparameter_scope_stack: list[HyperparameterScope] = []
+_hyperparameter_scope_stack: list[Hyperparameters] = []
 _hyperparameters_typed_dict_type: type | None = None
 _hyperparameters_type: type | None = None
 
