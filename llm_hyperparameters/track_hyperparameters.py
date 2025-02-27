@@ -16,15 +16,14 @@ T = typing.TypeVar("T")
 P = typing.ParamSpec("P")
 
 
-class HyperparametersMixin(typing.Mapping[str, typing.Any]):
-    """
-    A mixin that allows a dictionary to be used as a mapping of hyperparameters.
-    """
-
+class HyperparameterScopeMixin(ContextDecorator, typing.Mapping[Callable | str, typing.Any]):
     root: dict[str, typing.Any]
 
-    def __getitem__(self, key: str) -> typing.Any:
-        return self.root[key]
+    def __getitem__(self, key: "TrackedFunction | str") -> dict[str, typing.Any]:
+        if isinstance(key, TrackedFunction):
+            return self.root[key.config_name]
+        else:
+            return self.root[key]
 
     def __iter__(self) -> typing.Iterator[str]:
         return iter(self.root)
@@ -32,16 +31,27 @@ class HyperparametersMixin(typing.Mapping[str, typing.Any]):
     def __len__(self) -> int:
         return len(self.root)
 
+    def __setitem__(self, key: "TrackedFunction | str", value: typing.Any):
+        if isinstance(key, TrackedFunction):
+            self.root[key.config_name] = value
+        else:
+            self.root[key] = value
 
-class Hyperparameters(HyperparametersMixin, RootModel[dict[str, typing.Any]]):
-    """
-    A dictionary of hyperparameters.
-    """
+    def __contains__(self, key: object) -> bool:
+        if isinstance(key, TrackedFunction):
+            return key.config_name in self.root
+        else:
+            return key in self.root
 
-    pass
+    def __enter__(self):
+        _hyperparameter_scope_stack.append(self)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        _hyperparameter_scope_stack.pop()
 
 
-class HyperparameterScope(ContextDecorator, dict[Callable | str, typing.Any]):
+class HyperparameterScope(HyperparameterScopeMixin, RootModel[dict[str, typing.Any]]):
     """
     A context manager that allows tracking and overriding hyperparameters for decorated functions.
 
@@ -52,34 +62,11 @@ class HyperparameterScope(ContextDecorator, dict[Callable | str, typing.Any]):
     prefixed with `hparam_`) modified within the context of a HyperparameterScope instance.
     """
 
-    def __getitem__(self, key: "TrackedFunction | str") -> dict[str, typing.Any]:
-        if isinstance(key, TrackedFunction):
-            return super().__getitem__(key.config_name)
-        else:
-            return super().__getitem__(key)
+    root: dict[str, typing.Any] = Field(default_factory=dict)
 
-    def __setitem__(self, key: "TrackedFunction | str", value: typing.Any):
-        if isinstance(key, TrackedFunction):
-            return super().__setitem__(key.config_name, value)
-        else:
-            return super().__setitem__(key, value)
+    def __new__(cls, *args, **kwargs):
+        global _hyperparameters_typed_dict_type, _hyperparameters_type
 
-    def __contains__(self, key: object) -> bool:
-        if isinstance(key, TrackedFunction):
-            return super().__contains__(key.config_name)
-        else:
-            return super().__contains__(key)
-
-    def __delitem__(self, key: "TrackedFunction | str") -> None:
-        if isinstance(key, TrackedFunction):
-            return super().__delitem__(key.config_name)
-        else:
-            return super().__delitem__(key)
-
-    def build(self) -> Hyperparameters:
-        return Hyperparameters(self)
-
-    def __enter__(self):
         # Update Hyperparameters if necessary.
         # Check that the existing typed_dict_type with all tracked functions that are registered.
         # Get all tracked function config names and types
@@ -88,11 +75,10 @@ class HyperparameterScope(ContextDecorator, dict[Callable | str, typing.Any]):
         }
 
         # Get existing typed dict annotations if any
-        global _hyperparameters_typed_dict_type
         existing_annotations = getattr(_hyperparameters_typed_dict_type, "__annotations__", {})
 
         # Check if annotations match tracked functions
-        if existing_annotations != tracked_configs:
+        if _hyperparameters_type is None or existing_annotations != tracked_configs:
             # Print a warning and drop the existing typed dict type.
             if existing_annotations:
                 logging.warning(
@@ -108,26 +94,22 @@ class HyperparameterScope(ContextDecorator, dict[Callable | str, typing.Any]):
             )
 
             def create_hyperparameters_type(typed_dict_type: type) -> type:
-                class Hyperparameters(HyperparametersMixin, RootModel[typed_dict_type]):
-                    pass
+                class ActualHyperparameterScope(HyperparameterScopeMixin, RootModel[typed_dict_type]):
+                    root: typed_dict_type = Field(default_factory=dict)
 
-                return Hyperparameters
+                assert issubclass(ActualHyperparameterScope, ContextDecorator)
+                return ActualHyperparameterScope
 
-            global Hyperparameters
-            old_hyperparameters = Hyperparameters
-            Hyperparameters = functools.wraps(old_hyperparameters, updated=())(
+            _hyperparameters_type = functools.wraps(HyperparameterScope, updated=())(
                 create_hyperparameters_type(_hyperparameters_typed_dict_type)
             )
 
-        _hyperparameter_scope_stack.append(self)
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        _hyperparameter_scope_stack.pop()
+        return _hyperparameters_type(*args, **kwargs)
 
 
 _hyperparameter_scope_stack: list[HyperparameterScope] = []
 _hyperparameters_typed_dict_type: type | None = None
+_hyperparameters_type: type | None = None
 
 PARAM_PREFIX = "hparam_"
 
