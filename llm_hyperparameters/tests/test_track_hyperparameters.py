@@ -6,12 +6,12 @@ from llm_hyperparameters.track_hyperparameters import (
 
 def test_all():
     @track_hyperparameters
-    def f(*, hparam_a: int = 1):
-        return hparam_a
+    def f(*, _a: int = 1):
+        return _a
 
     @track_hyperparameters
-    def g(*, hparam_b: int = 2):
-        return hparam_b
+    def g(*, _b: int = 2):
+        return _b
 
     with Hyperparameters() as hparams:
         assert f() == 1
@@ -26,16 +26,16 @@ def test_all():
 
 def test_no_scope():
     @track_hyperparameters
-    def f(hparam_a: int = 1):
-        return hparam_a
+    def f(_a: int = 1):
+        return _a
 
     assert f() == 1
 
 
 def test_manual():
     @track_hyperparameters
-    def f(hparam_a: int = 1):
-        return hparam_a
+    def f(_a: int = 1):
+        return _a
 
     with Hyperparameters() as hparams:
         assert f() == 1
@@ -46,12 +46,12 @@ def test_manual():
         assert f() == 2
 
     @track_hyperparameters
-    def g(hparam_a: str = "Hello", hparam_b: str = "Hello"):
-        return hparam_a + hparam_b
+    def g(_a: str = "Hello", _b: str = "Hello"):
+        return _a + _b
 
     with Hyperparameters() as hparams:
         assert g() == "HelloHello"
-        assert g(hparam_b="World") == "HelloWorld"
+        assert g(_b="World") == "HelloWorld"
 
     hparams[g].b = "World"
 
@@ -61,14 +61,14 @@ def test_manual():
 
 def test_nested():
     @track_hyperparameters
-    def f(hparam_a: int = 1, hparam_b: int = 2):
-        return hparam_a + hparam_b
+    def f(_a: int = 1, _b: int = 2):
+        return _a + _b
 
     assert f() == 3
 
     @track_hyperparameters
-    def g(hparam_c: int = 3):
-        return hparam_c + f()
+    def g(_c: int = 3):
+        return _c + f()
 
     with Hyperparameters() as hparams:
         assert g() == 6
@@ -86,12 +86,12 @@ def test_nested():
 
 def test_serialization():
     @track_hyperparameters
-    def f(hparam_a: int = 1, hparam_b: int = 2):
-        return hparam_a + hparam_b
+    def f(_a: int = 1, _b: int = 2):
+        return _a + _b
 
     @track_hyperparameters
-    def g(hparam_c: int = 3):
-        return hparam_c + f()
+    def g(_c: int = 3):
+        return _c + f()
 
     with Hyperparameters() as hparams:
         assert g() == 6

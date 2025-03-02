@@ -111,7 +111,7 @@ _hyperparameter_scope_stack: list[Hyperparameters] = []
 _hyperparameters_typed_dict_type: type | None = None
 _hyperparameters_type: type | None = None
 
-PARAM_PREFIX = "hparam_"
+PARAM_PREFIX = "_"
 
 
 @dataclass
