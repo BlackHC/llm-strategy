@@ -123,3 +123,19 @@ def test_serialization():
     # Verify the deserialized hyperparameters work the same
     with Hyperparameters(new_hparams):
         assert g() == 11
+
+
+def test_type_compatibility():
+    @track_hyperparameters
+    def f(_a: int = 1):
+        return _a
+
+    @track_hyperparameters
+    def g():
+        return 0
+
+    hps = Hyperparameters()
+    hps[f] = f.config_model_type()
+    hps[g] = g.config_model_type()
+
+    Hyperparameters(hps)

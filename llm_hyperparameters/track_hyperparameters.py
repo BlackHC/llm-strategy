@@ -90,17 +90,24 @@ class Hyperparameters(HyperparametersMixin, RootModel[dict[str, typing.Any]]):
 
             # Create the typed dict type if it doesn't exist
             _hyperparameters_typed_dict_type = TypedDict(
-                "Hyperparameters",
+                "HyperparametersDictType",
                 tracked_configs,
                 total=False,
             )
 
             def create_hyperparameters_type(typed_dict_type: type) -> type:
-                class ActualHyperparameters(HyperparametersMixin, RootModel[typed_dict_type]):
-                    root: typed_dict_type = Field(default_factory=dict)
-
-                assert issubclass(ActualHyperparameters, ContextDecorator)
-                return ActualHyperparameters
+                locals = {}
+                exec(
+                    inspect.cleandoc(
+                        """
+                        class Hyperparameters(HyperparametersMixin, RootModel[typed_dict_type]):
+                            root: typed_dict_type = Field(default_factory=dict)
+                        """
+                    ),
+                    dict(globals()) | dict(typed_dict_type=typed_dict_type),
+                    locals,
+                )
+                return locals["Hyperparameters"]
 
             _hyperparameters_type = functools.wraps(Hyperparameters, updated=())(
                 create_hyperparameters_type(_hyperparameters_typed_dict_type)
