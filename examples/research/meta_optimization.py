@@ -8,17 +8,18 @@ from datetime import datetime
 from typing import Generic, TypeVar
 
 import langchain
-from langchain.cache import SQLiteCache
-from langchain.chat_models import ChatOpenAI
-from langchain.chat_models.base import BaseChatModel
-from langchain.schema import OutputParserException
+import pydantic
+from langchain_community.cache import SQLiteCache
+from langchain_community.chat_models import ChatOpenAI
+from langchain_core.exceptions import OutputParserException
+from langchain_core.language_models import BaseChatModel
 from llmtracer import JsonFileWriter, TraceViewerIntegration, wandb_tracer
 from openai import OpenAIError
 from pydantic import BaseModel, Field
-from pydantic.generics import GenericModel
 from rich.console import Console
 from rich.traceback import install
 
+import llm_hyperparameters
 import wandb
 from llm_hyperparameters.track_execution import (
     LangchainInterface,
@@ -28,7 +29,6 @@ from llm_hyperparameters.track_execution import (
 )
 from llm_hyperparameters.track_hyperparameters import (
     Hyperparameters,
-    hyperparameters_scope,
     track_hyperparameters,
 )
 from llm_strategy.chat_chain import ChatChain
@@ -38,13 +38,14 @@ install(
     show_locals=True,
     width=190,
     console=Console(width=190, color_system="truecolor", stderr=True),
+    suppress=[pydantic, llm_hyperparameters],
 )
 
 
-langchain.llm_cache = SQLiteCache(".optimization_unit.langchain.db")
+langchain.llm_cache = SQLiteCache(".optimization_unit_pydantic2.langchain.db")
 
 chat_model = ChatOpenAI(
-    model_name="o3-mini-2025-01-31",
+    model_name="gpt-4o-2024-11-20",
     request_timeout=500,
     max_completion_tokens=4096,
 )
@@ -63,7 +64,7 @@ T_TaskResults = TypeVar("T_TaskResults")
 T_Hyperparameters = TypeVar("T_Hyperparameters")
 
 
-class TaskRun(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
+class TaskRun(BaseModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
     """
     The task run. This is the 'data' we use to optimize the hyperparameters.
     """
@@ -116,7 +117,7 @@ class TaskReflection(BaseModel):
     )
 
 
-class TaskInfo(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
+class TaskInfo(BaseModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
     """
     The task run and the reflection on the experiment.
     """
@@ -129,7 +130,7 @@ class TaskInfo(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperpar
     reflection: TaskReflection = Field(..., description="The reflection on the task.")
 
 
-class OptimizationInfo(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
+class OptimizationInfo(BaseModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
     """
     The optimization information. This is the data we use to optimize the
     hyperparameters.
@@ -149,7 +150,7 @@ class OptimizationInfo(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_
     best_hyperparameters: T_Hyperparameters = Field(..., description="The best hyperparameters we have found so far.")
 
 
-class OptimizationStep(GenericModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
+class OptimizationStep(BaseModel, Generic[T_TaskParameters, T_TaskResults, T_Hyperparameters]):
     """
     The next optimization steps. New hyperparameters we want to try experiments and new
     task parameters we want to evaluate on given the previous experiments.
@@ -239,6 +240,8 @@ class LLMOptimizer:
         information available is unlikely to lead to better hyperparameters, return 0.
         If you think that the information available is very likely to lead to better
         hyperparameters, return 1. Be concise.
+
+        Note that only the currently available hyperparameters can be adapted. No new hyperparameters can be added.
         """
         raise NotImplementedError()
 
@@ -257,7 +260,7 @@ def capture_task_run(
 
     exception = None
     return_value = None
-    with hyperparameters_scope(hyperparameters) as scope:
+    with Hyperparameters(hyperparameters) as updated_hyperparameters:
         try:
             return_value = task_executor.explicit(tracked_chat_model, task_parameters)
         except (OpenAIError, OutputParserException) as e:
@@ -268,9 +271,9 @@ def capture_task_run(
     print(return_value)
 
     all_chat_chains = get_tracked_chats(tracked_chat_model)
-    return TaskRun[structured_prompt.input_type, structured_prompt.return_annotation, type(scope.hyperparameters),](
+    return TaskRun[type(task_parameters), structured_prompt.return_annotation, type(updated_hyperparameters),](
         task_parameters=task_parameters,
-        hyperparameters=scope.hyperparameters,
+        hyperparameters=updated_hyperparameters,
         all_chat_chains=all_chat_chains,
         return_value=return_value,
         exception=exception,
@@ -292,7 +295,7 @@ def optimize_hyperparameters(
             llm_interface=task_root_chain,
             task_executor=task_executor,
             task_parameters=task_parameters,
-            hyperparameters=BaseModel(),
+            hyperparameters=Hyperparameters(),
         )
         for task_parameters in seed_task_parameters
     ]
@@ -304,7 +307,7 @@ def optimize_hyperparameters(
     for task_run in seed_task_runs:
         task_infos.append(
             TaskInfo[
-                llm_bound_signature.input_type,
+                type(task_run.task_parameters),
                 llm_bound_signature.return_annotation,
                 type(task_run.hyperparameters),
             ](
@@ -315,16 +318,17 @@ def optimize_hyperparameters(
             )
         )
 
-    hyperparamters = Hyperparameters.merge(task_info.hyperparameters for task_info in task_infos)
-    hyperparameter_type = type(hyperparamters)
+    hyperparameters = task_infos[0].hyperparameters
+    hyperparameters_type = type(hyperparameters)
 
     optimization_info = OptimizationInfo[
-        llm_bound_signature.input_type,
+        type(task_run.task_parameters),
         llm_bound_signature.return_annotation,
-        hyperparameter_type,
+        hyperparameters_type,
     ](
+        older_task_summary=None,
         task_infos=task_infos,
-        best_hyperparameters=hyperparamters,
+        best_hyperparameters=hyperparameters,
     )
 
     optimization_step = None
@@ -337,9 +341,9 @@ def optimize_hyperparameters(
             for hyperparameters in optimization_step.hyperparameter_suggestions:
                 task_run = capture_task_run(task_root_chain, task_executor, task_parameters, hyperparameters)
                 task_info = TaskInfo[
-                    llm_bound_signature.input_type,
+                    type(task_run.task_parameters),
                     llm_bound_signature.return_annotation,
-                    type(hyperparameters),
+                    hyperparameters_type,
                 ](
                     task_parameters=task_run.task_parameters,
                     hyperparameters=task_run.hyperparameters,
@@ -352,9 +356,9 @@ def optimize_hyperparameters(
             optimization_info.older_task_summary = LLMOptimizer.summarize_optimization_info(
                 root_chain,
                 OptimizationInfo[
-                    llm_bound_signature.input_type,
+                    type(task_run.task_parameters),
                     llm_bound_signature.return_annotation,
-                    hyperparameter_type,
+                    hyperparameters_type,
                 ](
                     older_task_summary=optimization_info.older_task_summary,
                     task_infos=optimization_info.task_infos[:-10],
