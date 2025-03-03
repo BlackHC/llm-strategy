@@ -15,8 +15,17 @@ from llm_strategy.llm_function import (
     Output,
     get_concise_type_repr,
     is_not_implemented,
+    reset_model_cache,
 )
 from llm_strategy.testing.fake_llm import FakeLLM
+
+
+@pytest.fixture(autouse=True)
+def clear_model_cache():
+    """Fixture to reset the model cache before and after each test."""
+    reset_model_cache()
+    yield
+    reset_model_cache()
 
 
 def not_implemented_function():

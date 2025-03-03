@@ -21,7 +21,10 @@ from pydantic._internal._generics import get_origin
 from pydantic.fields import FieldInfo, PydanticUndefined
 from pydantic.type_adapter import TypeAdapter
 
-from llm_hyperparameters.track_hyperparameters import track_hyperparameters
+from llm_hyperparameters.track_hyperparameters import (
+    TrackedFunction,
+    track_hyperparameters,
+)
 from llm_strategy.chat_chain import ChatChain
 from llm_strategy.pydantic_generic_type_resolution import PydanticGenericTypeMap
 
@@ -31,6 +34,71 @@ P = typing_extensions.ParamSpec("P")
 B = typing.TypeVar("B", bound=BaseModel)
 C = typing.TypeVar("C", bound=BaseModel)
 F = typing.TypeVar("F", bound=typing.Callable)
+
+
+_model_cache: dict[str, dict[tuple[tuple[type, ...], tuple], type[BaseModel]]] = {}
+
+
+def cached_create_model(
+    model_name: str,
+    *,
+    __base__: tuple[type, ...] | type = None,
+    __module__: str | None = None,
+    __validators__: dict[str, classmethod] | None = None,
+    __cls_kwargs__: dict[str, typing.Any] | None = None,
+    **field_definitions: typing.Any,
+) -> type[BaseModel]:
+    """
+    A wrapper around pydantic's create_model that caches models by their specification.
+
+    This helps avoid creating duplicate model classes with the same structure.
+    """
+    # Convert __base__ to a tuple if it's a single type
+    if __base__ is not None and not isinstance(__base__, tuple):
+        __base__ = (__base__,)
+
+    # Create a hashable representation of field definitions
+    field_defs_hashable = tuple(field_definitions.items())
+
+    if model_name not in _model_cache:
+        _model_cache[model_name] = {}
+
+    specific_model_cache = _model_cache[model_name]
+
+    # Create a cache key
+    cache_key = (__base__ or (), field_defs_hashable)
+
+    # Check if we already have this model in the cache
+    if cache_key in specific_model_cache:
+        return specific_model_cache[cache_key]
+
+    if specific_model_cache:
+        unique_model_name = f"{model_name}_{len(specific_model_cache)}"
+    else:
+        unique_model_name = model_name
+
+    # Create the model
+    model = create_model(
+        unique_model_name,
+        __base__=__base__,
+        __module__=__module__,
+        __validators__=__validators__,
+        __cls_kwargs__=__cls_kwargs__,
+        **field_definitions,
+    )
+
+    # Cache the model
+    specific_model_cache[cache_key] = model
+
+    return model
+
+
+def reset_model_cache():
+    """
+    Reset the model cache.
+    """
+    global _model_cache
+    _model_cache = {}
 
 
 def get_json_schema_hyperparameters(schema: dict):
@@ -164,13 +232,22 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
 
     @staticmethod
     def extract_from_definitions(definitions: dict, type_: type) -> dict:
-        type_name = type_.__name__.replace(" ", "")
+        type_name = type_.__name__
         normalized_name = DEFAULT_JSON_SCHEMA.normalize_name(type_name)
 
-        sub_schema = definitions[normalized_name]
-        del definitions[normalized_name]
+        # TODO: somehow we have different numbers of _ in the definitions
+        # We should fix this properly but right now manually matching is the best alternative.
 
-        return sub_schema
+        # so let's normalize both by replacing _{1,} with _
+        # This is not using regex correctly - replace with proper regex pattern
+        normalized_name = re.sub(r"_+", "_", normalized_name)
+        for name, sub_schema in definitions.items():
+            normalized_def_name = re.sub(r"_+", "_", name)
+            if normalized_name == normalized_def_name:
+                del definitions[name]
+                return sub_schema
+
+        raise ValueError(f"Could not find type {type_name} in definitions {definitions}")
 
     def get_json_schema(self, exclude_default: bool = True) -> dict:
         type_adapter = TypeAdapter(tuple[self.input_type, self.output_type])
@@ -178,8 +255,8 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
         definitions: dict = deepcopy(schema["$defs"])
         # remove title and type from each sub dict in the definitions
         for value in definitions.values():
-            value.pop("title")
-            value.pop("type")
+            value.pop("title", None)
+            value.pop("type", None)
 
             for property in value.get("properties", {}).values():
                 property.pop("title", None)
@@ -477,15 +554,15 @@ class LLMBoundSignature:
         model_spec = LLMBoundSignature.field_tuples_to_model_spec(parameter_dict)
         if generic_parameters:
             bases = (BaseModel, typing.Generic[*generic_parameters])
-            input_type = create_model(
+            input_type = cached_create_model(
                 f"{class_name}Inputs",
                 __base__=bases,
                 __module__=f.__module__,
                 **model_spec,
             )
         else:
-            input_type = create_model(f"{class_name}Inputs", __module__=f.__module__, **model_spec)
-        input_type.update_forward_refs()
+            input_type = cached_create_model(f"{class_name}Inputs", __module__=f.__module__, **model_spec)
+        input_type.model_rebuild()
 
         # update parameter_dict types with bound_arguments
         # this ensures that we serialize the actual types
@@ -500,12 +577,12 @@ class LLMBoundSignature:
                 )
 
         specific_model_spec = LLMBoundSignature.field_tuples_to_model_spec(parameter_dict)
-        specific_input_type = create_model(
+        specific_input_type = cached_create_model(
             f"Specific{class_name}Inputs",
             __module__=f.__module__,
             **specific_model_spec,
         )
-        specific_input_type.update_forward_refs()
+        specific_input_type.model_rebuild()
 
         input = specific_input_type(**bound_arguments.arguments)
 
@@ -607,6 +684,9 @@ class LLMFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):
     A callable that can be called with a chat model.
     """
 
+    def __init__(self):
+        self._tracked_function: TrackedFunction[P, T] | None = None
+
     def llm_bound_signature(self, *args, **kwargs) -> LLMBoundSignature:
         return LLMBoundSignature.from_call(self, args, kwargs)
 
@@ -631,7 +711,7 @@ class LLMFunction(LLMFunctionInterface[P, T], typing.Generic[P, T]):
     ):
         """Call the function with explicit inputs."""
 
-        return track_hyperparameters(self)(language_model_or_chat_chain, **dict(input_object))
+        return self._tracked_function(language_model_or_chat_chain, **dict(input_object))
 
     @trace_calls(kind=TraceNodeKind.CHAIN, capture_return=slicer[1:], capture_args=True)
     def __call__(
@@ -797,7 +877,9 @@ def apply_decorator(f: F_types, decorator) -> F_types:
         if not is_not_implemented(f):
             raise ValueError("The function must not be implemented.")
 
-        specific_llm_function = track_hyperparameters(functools.wraps(f)(decorator(f)))
+        decorated = decorator(f)
+        specific_llm_function = track_hyperparameters(functools.wraps(f)(decorated))
+        decorated._tracked_function = specific_llm_function
 
     return typing.cast(F_types, specific_llm_function)
 
