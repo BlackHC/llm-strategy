@@ -1,3 +1,5 @@
+from pydantic import Field
+
 from llm_hyperparameters.track_hyperparameters import (
     Hyperparameters,
     track_hyperparameters,
@@ -22,6 +24,22 @@ def test_all():
     with hparams:
         assert f() == 3
         assert g() == 2
+
+
+def test_field():
+    @track_hyperparameters
+    def f(*, _a: int = Field(default=1, description="A test field")):  # noqa: B008
+        return _a
+
+    assert f() == 1
+
+    with Hyperparameters() as hparams:
+        assert f() == 1
+
+    hparams[f].a = 2
+
+    with hparams:
+        assert f() == 2
 
 
 def test_no_scope():

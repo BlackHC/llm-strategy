@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from typing import Callable
 
 from pydantic import BaseModel, Field, RootModel, create_model
+from pydantic.fields import FieldInfo
+from pydantic_core import PydanticUndefined
 from typing_extensions import TypedDict
 
 from llm_hyperparameters.utils.callable_wrapper import CallableWrapper
@@ -121,6 +123,7 @@ class TrackedFunction(CallableWrapper, typing.Callable[P, T], typing.Generic[P, 
     """
 
     __wrapped__: typing.Callable[P, T]
+    updated_signature: inspect.Signature
     config_model_type: typing.Type[BaseModel]
     config_name: str
 
@@ -129,7 +132,8 @@ class TrackedFunction(CallableWrapper, typing.Callable[P, T], typing.Generic[P, 
         # Get signature and extract hyperparameter args
         sig = inspect.signature(f)
         field_definitions = {}
-        for name, param in sig.parameters.items():
+        parameters = dict(sig.parameters)
+        for name, param in parameters.items():
             if name.startswith(PARAM_PREFIX):
                 if param.default is inspect.Parameter.empty:
                     raise ValueError(f"Hyperparameter {name} has no explicit value!")
@@ -137,8 +141,13 @@ class TrackedFunction(CallableWrapper, typing.Callable[P, T], typing.Generic[P, 
                     raise ValueError(f"Hyperparameter {name} has no explicit type!")
                 field_definitions[name.removeprefix(PARAM_PREFIX)] = (
                     param.annotation,
-                    Field(default=param.default),
+                    param.default,
                 )
+                if isinstance(param.default, FieldInfo):
+                    assert param.default.default is not PydanticUndefined
+                    parameters[name] = param.replace(default=param.default.default)
+
+        updated_signature = sig.replace(parameters=list(parameters.values()))
 
         escaped_name = string.capwords(f.__name__, sep="_").replace("_", "")
         class_name = f"{escaped_name}Hyperparameters"
@@ -148,7 +157,8 @@ class TrackedFunction(CallableWrapper, typing.Callable[P, T], typing.Generic[P, 
         tracked_function = functools.wraps(f)(
             TrackedFunction(
                 f,
-                config_model_type,
+                updated_signature=updated_signature,
+                config_model_type=config_model_type,
                 config_name=convert_callable_to_name(f),
             )
         )
@@ -157,7 +167,9 @@ class TrackedFunction(CallableWrapper, typing.Callable[P, T], typing.Generic[P, 
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T:
         if not _hyperparameter_scope_stack:
-            return self.__wrapped__(*args, **kwargs)
+            bound_arguments = self.updated_signature.bind(*args, **kwargs)
+            bound_arguments.apply_defaults()
+            return self.__wrapped__(*bound_arguments.args, **bound_arguments.kwargs)
         else:
             if self.config_name in _hyperparameter_scope_stack[-1]:
                 hparams = _hyperparameter_scope_stack[-1][self.config_name]
