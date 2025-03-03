@@ -4,8 +4,8 @@ A simple CUI application to visualize and query a customer database using the `t
 from dataclasses import dataclass
 
 import langchain
-from langchain.cache import SQLiteCache
-from langchain.llms import OpenAI
+from langchain_community.cache import SQLiteCache
+from langchain_community.llms import OpenAI
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Button, DataTable, Footer, Header, Input
