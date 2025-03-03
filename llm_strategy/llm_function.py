@@ -16,15 +16,12 @@ from langchain_core.exceptions import OutputParserException
 from langchain_core.language_models import BaseChatModel, BaseLanguageModel, BaseLLM
 from llmtracer import TraceNodeKind, trace_calls, update_event_properties, update_name
 from llmtracer.trace_builder import slicer
-from pydantic import BaseModel, ValidationError, create_model
+from pydantic import BaseModel, Field, ValidationError, create_model
 from pydantic._internal._generics import get_origin
 from pydantic.fields import FieldInfo, PydanticUndefined
 from pydantic.type_adapter import TypeAdapter
 
-from llm_hyperparameters.track_hyperparameters import (
-    Hyperparameter,
-    track_hyperparameters,
-)
+from llm_hyperparameters.track_hyperparameters import track_hyperparameters
 from llm_strategy.chat_chain import ChatChain
 from llm_strategy.pydantic_generic_type_resolution import PydanticGenericTypeMap
 
@@ -167,7 +164,8 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
 
     @staticmethod
     def extract_from_definitions(definitions: dict, type_: type) -> dict:
-        normalized_name = DEFAULT_JSON_SCHEMA.normalize_name(type_.__name__)
+        type_name = type_.__name__.replace(" ", "")
+        normalized_name = DEFAULT_JSON_SCHEMA.normalize_name(type_name)
 
         sub_schema = definitions[normalized_name]
         del definitions[normalized_name]
@@ -261,7 +259,7 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
 
         update_json_schema_hyperparameters(
             schema,
-            Hyperparameter("json_schema") @ get_json_schema_hyperparameters(schema),
+            get_json_schema_hyperparameters(schema),
         )
 
         update_event_properties(
@@ -280,39 +278,46 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
         return parsed_output.return_value
 
     @track_hyperparameters
-    def query(self, language_model_or_chat_chain, schema):  # noqa: C901
+    def query(  # noqa: C901
+        self,
+        language_model_or_chat_chain,
+        schema,
+        _json_dumps_kwargs: dict = dict(indent=None),  # noqa: B006
+        _additional_definitions_prompt_template: str = "Here is the schema for additional data types:\n```\n{additional_definitions}\n```\n\n",
+        _llm_structured_prompt_template: str = Field(  # noqa: B008
+            "{docstring}\n\nThe input and output are formatted as a JSON interface that conforms to the JSON schemas"
+            ' below.\n\nAs an example, for the schema {{"properties": {{"foo": {{"description": "a list of strings",'
+            ' "type": "array", "items": {{"type": "string"}}}}}}, "required": ["foo"]}}}} the object {{"foo": ["bar",'
+            ' "baz"]}} is a well-formatted instance of the schema. The object {{"properties": {{"foo": ["bar",'
+            ' "baz"]}}}} is not well-formatted.\n\n{optional_additional_definitions_prompt}Here is the input'
+            " schema:\n```\n{input_schema}\n```\n\nHere is the output schema:\n```\n{output_schema}\n```\nNow output"
+            " the results for the following inputs:\n```\n{inputs}\n```",
+            description=(
+                "The general-purpose prompt for the structured prompt execution. It tells the LLM what to "
+                "do and how to read function arguments and structure return values. "
+            ),
+        ),
+        _num_retries_on_parser_failure: int = 3,
+        _output_prompt: str = "Received the output\n\n",
+        _error_prompt: str = "Tried to parse your output but failed:\n\n",
+        _retry_prompt: str = "Please try again and avoid this issue.",
+    ):
         # create the prompt
-        json_dumps_kwargs = Hyperparameter("json_dumps_kwargs") @ dict(indent=None)
-        additional_definitions_prompt_template = Hyperparameter(
-            "additional_definitions_prompt_template",
-            "Here is the schema for additional data types:\n```\n{additional_definitions}\n```\n\n",
-        )
-
         optional_additional_definitions_prompt = ""
         if schema["additional_definitions"]:
-            optional_additional_definitions_prompt = additional_definitions_prompt_template.format(
-                additional_definitions=json.dumps(schema["additional_definitions"], **json_dumps_kwargs)
+            optional_additional_definitions_prompt = _additional_definitions_prompt_template.format(
+                additional_definitions=json.dumps(schema["additional_definitions"], **_json_dumps_kwargs)
             )
 
-        prompt = (
-            Hyperparameter(
-                "llm_structured_prompt_template",
-                description=(
-                    "The general-purpose prompt for the structured prompt execution. It tells the LLM what to "
-                    "do and how to read function arguments and structure return values. "
-                ),
-            )
-            @ '{docstring}\n\nThe input and output are formatted as a JSON interface that conforms to the JSON schemas below.\n\nAs an example, for the schema {{"properties": {{"foo": {{"description": "a list of strings", "type": "array", "items": {{"type": "string"}}}}}}, "required": ["foo"]}}}} the object {{"foo": ["bar", "baz"]}} is a well-formatted instance of the schema. The object {{"properties": {{"foo": ["bar", "baz"]}}}} is not well-formatted.\n\n{optional_additional_definitions_prompt}Here is the input schema:\n```\n{input_schema}\n```\n\nHere is the output schema:\n```\n{output_schema}\n```\nNow output the results for the following inputs:\n```\n{inputs}\n```'
-        ).format(
+        prompt = _llm_structured_prompt_template.format(
             docstring=self.docstring,
             optional_additional_definitions_prompt=optional_additional_definitions_prompt,
-            input_schema=json.dumps(schema["input_schema"], **json_dumps_kwargs),
-            output_schema=json.dumps(schema["output_schema"], **json_dumps_kwargs),
-            inputs=self.input.model_dump_json(**json_dumps_kwargs),
+            input_schema=json.dumps(schema["input_schema"], **_json_dumps_kwargs),
+            output_schema=json.dumps(schema["output_schema"], **_json_dumps_kwargs),
+            inputs=self.input.model_dump_json(**_json_dumps_kwargs),
         )
 
         # get the response
-        num_retries = Hyperparameter("num_retries_on_parser_failure") @ 3
         if language_model_or_chat_chain is None:
             raise ValueError("The language model or chat chain must be provided.")
 
@@ -321,23 +326,18 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
 
         if isinstance(language_model_or_chat_chain, ChatChain):
             chain = language_model_or_chat_chain
-            for _ in range(num_retries):
+            for _ in range(_num_retries_on_parser_failure):
                 output, chain = chain.query(prompt, model_args=chain.enforce_json_response())
 
                 try:
                     parsed_output = parse(output, self.output_type)
                     break
                 except OutputParserException as e:
-                    prompt = (
-                        prompt
-                        + Hyperparameter("output_prompt") @ "\n\nReceived the output\n\n"
-                        + output
-                        + Hyperparameter("error_prompt") @ "Tried to parse your output but failed:\n\n"
-                        + str(e)
-                        + Hyperparameter("retry_prompt") @ "\n\nPlease try again and avoid this issue."
-                    )
+                    prompt = prompt + _output_prompt + output + _error_prompt + str(e) + _retry_prompt
             else:
-                exception = OutputParserException(f"Failed to parse the output after {num_retries} retries.")
+                exception = OutputParserException(
+                    f"Failed to parse the output after {_num_retries_on_parser_failure} retries."
+                )
                 exception.add_note(repr(chain))
                 raise exception
         elif isinstance(language_model_or_chat_chain, BaseLLM):
@@ -352,23 +352,18 @@ class LLMStructuredPrompt(typing.Generic[B, T]):
             else:
                 model_args = {}
 
-            for _ in range(num_retries):
+            for _ in range(_num_retries_on_parser_failure):
                 output = model(prompt, **model_args)
 
                 try:
                     parsed_output = parse(output, self.output_type)
                     break
                 except OutputParserException as e:
-                    prompt = (
-                        prompt
-                        + Hyperparameter("output_prompt") @ "\n\nReceived the output\n\n"
-                        + output
-                        + Hyperparameter("error_prompt") @ "Tried to parse your output but failed:\n\n"
-                        + str(e)
-                        + Hyperparameter("retry_prompt") @ "\n\nPlease try again and avoid this issue."
-                    )
+                    prompt = prompt + _output_prompt + output + _error_prompt + str(e) + _retry_prompt
             else:
-                exception = OutputParserException(f"Failed to parse the output after {num_retries} retries.")
+                exception = OutputParserException(
+                    f"Failed to parse the output after {_num_retries_on_parser_failure} retries."
+                )
                 exception.add_note(prompt)
                 raise exception
         else:
@@ -415,7 +410,12 @@ class LLMBoundSignature:
         return inputs
 
     @staticmethod
-    def from_call(f: typing.Callable[P, T], args: P.args, kwargs: P.kwargs) -> "LLMBoundSignature":  # noqa: C901
+    def from_call(  # noqa: C901
+        f: typing.Callable[P, T],
+        args: P.args,
+        kwargs: P.kwargs,
+        _docstring: str | None = None,
+    ) -> "LLMBoundSignature":  # noqa: C901
         """Create an LLMBoundSignature from a function.
 
         Args:
@@ -426,7 +426,7 @@ class LLMBoundSignature:
         """
 
         # get clean docstring
-        docstring = Hyperparameter("docstring") @ inspect.getdoc(f)
+        docstring = _docstring or inspect.getdoc(f)
         if docstring is None:
             raise ValueError("The function must have a docstring.")
 
